@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS SOC — Banking Cyber Defense</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg-void: #030712;
+    --bg-deep: #070e1a;
+    --bg-panel: #0a1628;
+    --bg-card: #0d1f35;
+    --border-dim: rgba(0,200,255,0.1);
+    --border-glow: rgba(0,200,255,0.35);
+    --cyan: #00c8ff;
+    --cyan-dim: rgba(0,200,255,0.6);
+    --green: #00ff88;
+    --green-dim: rgba(0,255,136,0.6);
+    --red: #ff3860;
+    --red-dim: rgba(255,56,96,0.6);
+    --amber: #ffb300;
+    --amber-dim: rgba(255,179,0,0.6);
+    --purple: #a855f7;
+    --text-primary: #e0f4ff;
+    --text-secondary: rgba(200,230,255,0.55);
+    --text-dim: rgba(200,230,255,0.3);
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-display: 'Orbitron', sans-serif;
+    --font-body: 'Rajdhani', sans-serif;
+  }
+ 
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+ 
+  body {
+    background: var(--bg-void);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+ 
+  /* Scanline overlay */
+  body::before {
+    content:'';
+    position:fixed;
+    inset:0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,200,255,0.012) 2px,
+      rgba(0,200,255,0.012) 4px
+    );
+    pointer-events:none;
+    z-index:9999;
+  }
+ 
+  /* Grid noise background */
+  body::after {
+    content:'';
+    position:fixed;
+    inset:0;
+    background-image:
+      linear-gradient(rgba(0,200,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events:none;
+    z-index:0;
+  }
+ 
+  /* HEADER */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(3,7,18,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border-glow);
+    padding: 0 24px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 0 40px rgba(0,200,255,0.08);
+  }
+ 
+  .header-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+ 
+  .logo-icon {
+    width: 38px;
+    height: 38px;
+    border: 2px solid var(--cyan);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 0 16px rgba(0,200,255,0.4), inset 0 0 16px rgba(0,200,255,0.08);
+  }
+ 
+  .logo-icon::before {
+    content: '⬡';
+    font-size: 20px;
+    color: var(--cyan);
+    text-shadow: 0 0 12px var(--cyan);
+  }
+ 
+  .logo-text {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    text-shadow: 0 0 20px rgba(0,200,255,0.5);
+  }
+ 
+  .logo-sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+ 
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+ 
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+  }
+ 
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse-anim 2s ease-in-out infinite;
+  }
+  .pulse-dot.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .pulse-dot.red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .pulse-dot.amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+ 
+  @keyframes pulse-anim {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.4; transform:scale(0.7); }
+  }
+ 
+  .header-time {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--cyan);
+    letter-spacing: 2px;
+  }
+ 
+  /* MAIN LAYOUT */
+  .main {
+    position: relative;
+    z-index: 1;
+    padding: 20px 24px;
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+ 
+  /* SECTION TITLE */
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+ 
+  .section-title::before {
+    content:'';
+    width: 3px;
+    height: 14px;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+    border-radius: 2px;
+  }
+ 
+  /* METRICS ROW */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+ 
+  .metric-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 10px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+ 
+  .metric-card:hover { border-color: var(--border-glow); }
+ 
+  .metric-card::before {
+    content:'';
+    position:absolute;
+    top:0; left:0; right:0;
+    height:2px;
+    border-radius:10px 10px 0 0;
+  }
+  .metric-card.cyan::before { background: linear-gradient(90deg, transparent, var(--cyan), transparent); box-shadow: 0 0 12px var(--cyan); }
+  .metric-card.green::before { background: linear-gradient(90deg, transparent, var(--green), transparent); box-shadow: 0 0 12px var(--green); }
+  .metric-card.red::before { background: linear-gradient(90deg, transparent, var(--red), transparent); box-shadow: 0 0 12px var(--red); }
+  .metric-card.amber::before { background: linear-gradient(90deg, transparent, var(--amber), transparent); box-shadow: 0 0 12px var(--amber); }
+  .metric-card.purple::before { background: linear-gradient(90deg, transparent, var(--purple), transparent); box-shadow: 0 0 12px var(--purple); }
+ 
+  .metric-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+ 
+  .metric-value {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .metric-card.cyan .metric-value { color: var(--cyan); text-shadow: 0 0 16px rgba(0,200,255,0.4); }
+  .metric-card.green .metric-value { color: var(--green); text-shadow: 0 0 16px rgba(0,255,136,0.4); }
+  .metric-card.red .metric-value { color: var(--red); text-shadow: 0 0 16px rgba(255,56,96,0.4); }
+  .metric-card.amber .metric-value { color: var(--amber); text-shadow: 0 0 16px rgba(255,179,0,0.4); }
+  .metric-card.purple .metric-value { color: var(--purple); text-shadow: 0 0 16px rgba(168,85,247,0.4); }
+ 
+  .metric-delta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-secondary);
+  }
+ 
+  .metric-icon {
+    position: absolute;
+    right: 16px;
+    bottom: 14px;
+    font-size: 28px;
+    opacity: 0.12;
+  }
+ 
+  /* GRID LAYOUT */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-65-35 { display: grid; grid-template-columns: 1.8fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-35-65 { display: grid; grid-template-columns: 1fr 1.8fr; gap: 16px; margin-bottom: 16px; }
+ 
+  /* PANEL */
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-dim);
+    border-radius: 12px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+ 
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-dim);
+  }
+ 
+  .panel-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--text-primary);
+    text-transform: uppercase;
+  }
+ 
+  .panel-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+  }
+  .badge-live { background: rgba(0,255,136,0.12); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .badge-alert { background: rgba(255,56,96,0.12); color: var(--red); border: 1px solid rgba(255,56,96,0.3); }
+  .badge-warn { background: rgba(255,179,0,0.12); color: var(--amber); border: 1px solid rgba(255,179,0,0.3); }
+  .badge-info { background: rgba(0,200,255,0.12); color: var(--cyan); border: 1px solid rgba(0,200,255,0.3); }
+ 
+  /* CHART CONTAINER */
+  .chart-wrap { position: relative; height: 180px; }
+  .chart-wrap-lg { position: relative; height: 220px; }
+ 
+  /* AUTH TABLE */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-dim);
+  }
+  .data-table td {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    padding: 7px 8px;
+    border-bottom: 1px solid rgba(0,200,255,0.04);
+    white-space: nowrap;
+  }
+  .data-table tr:hover td { background: rgba(0,200,255,0.04); }
+ 
+  .auth-method {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+  }
+  .auth-fp { background: rgba(0,200,255,0.12); color: var(--cyan); border: 1px solid rgba(0,200,255,0.2); }
+  .auth-face { background: rgba(168,85,247,0.12); color: var(--purple); border: 1px solid rgba(168,85,247,0.2); }
+  .auth-pat { background: rgba(255,179,0,0.12); color: var(--amber); border: 1px solid rgba(255,179,0,0.2); }
+  .auth-pwd { background: rgba(255,56,96,0.12); color: var(--red); border: 1px solid rgba(255,56,96,0.2); }
+ 
+  .status-ok { color: var(--green); }
+  .status-fail { color: var(--red); }
+  .status-warn { color: var(--amber); }
+ 
+  .anomaly-badge {
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-family: var(--font-mono);
+    letter-spacing: 1px;
+  }
+  .anomaly-high { background: rgba(255,56,96,0.15); color: var(--red); border: 1px solid rgba(255,56,96,0.3); }
+  .anomaly-med { background: rgba(255,179,0,0.15); color: var(--amber); border: 1px solid rgba(255,179,0,0.3); }
+  .anomaly-low { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+ 
+  /* THREAT SCORE */
+  .threat-gauge-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 0;
+  }
+ 
+  .threat-score-ring {
+    position: relative;
+    width: 120px;
+    height: 120px;
+  }
+ 
+  .threat-score-ring svg { transform: rotate(-90deg); }
+ 
+  .threat-score-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+ 
+  .threat-score-num {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--red);
+    text-shadow: 0 0 20px rgba(255,56,96,0.6);
+  }
+ 
+  .threat-score-unit {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+ 
+  /* AGENTS */
+  .agents-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+ 
+  .agent-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 8px;
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+ 
+  .agent-card.active { border-color: rgba(0,255,136,0.3); }
+  .agent-card.warning { border-color: rgba(255,56,96,0.3); }
+  .agent-card.scanning { border-color: rgba(0,200,255,0.3); }
+ 
+  .agent-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+ 
+  .agent-name {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+  }
+ 
+  .agent-status {
+    font-size: 8px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    letter-spacing: 1px;
+  }
+  .agent-status.on { background: rgba(0,255,136,0.12); color: var(--green); }
+  .agent-status.alert { background: rgba(255,56,96,0.12); color: var(--red); }
+  .agent-status.scan { background: rgba(0,200,255,0.12); color: var(--cyan); }
+ 
+  .agent-metric {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    margin: 4px 0;
+  }
+  .agent-card.active .agent-metric { color: var(--green); }
+  .agent-card.warning .agent-metric { color: var(--red); }
+  .agent-card.scanning .agent-metric { color: var(--cyan); }
+ 
+  .agent-desc {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+ 
+  .agent-progress {
+    height: 2px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+ 
+  .agent-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s ease;
+    animation: progress-shimmer 2s ease-in-out infinite;
+  }
+  .active .agent-progress-fill { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .warning .agent-progress-fill { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .scanning .agent-progress-fill { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+ 
+  @keyframes progress-shimmer {
+    0%,100% { opacity:1; }
+    50% { opacity:0.6; }
+  }
+ 
+  /* THREAT FEED */
+  .feed-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+ 
+  .feed-list::-webkit-scrollbar { width: 3px; }
+  .feed-list::-webkit-scrollbar-track { background: transparent; }
+  .feed-list::-webkit-scrollbar-thumb { background: var(--border-glow); border-radius: 2px; }
+ 
+  .feed-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    animation: feed-in 0.4s ease forwards;
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+ 
+  @keyframes feed-in {
+    from { opacity:0; transform:translateX(-10px); }
+    to { opacity:1; transform:translateX(0); }
+  }
+ 
+  .feed-item.alert { background: rgba(255,56,96,0.06); border-color: rgba(255,56,96,0.15); }
+  .feed-item.warn { background: rgba(255,179,0,0.06); border-color: rgba(255,179,0,0.15); }
+  .feed-item.block { background: rgba(168,85,247,0.06); border-color: rgba(168,85,247,0.15); }
+  .feed-item.info { background: rgba(0,200,255,0.06); border-color: rgba(0,200,255,0.15); }
+  .feed-item.ok { background: rgba(0,255,136,0.06); border-color: rgba(0,255,136,0.15); }
+ 
+  .feed-type {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .feed-item.alert .feed-type { background: rgba(255,56,96,0.2); color: var(--red); }
+  .feed-item.warn .feed-type { background: rgba(255,179,0,0.2); color: var(--amber); }
+  .feed-item.block .feed-type { background: rgba(168,85,247,0.2); color: var(--purple); }
+  .feed-item.info .feed-type { background: rgba(0,200,255,0.2); color: var(--cyan); }
+  .feed-item.ok .feed-type { background: rgba(0,255,136,0.2); color: var(--green); }
+ 
+  .feed-msg { color: var(--text-secondary); line-height: 1.5; flex: 1; }
+  .feed-time { color: var(--text-dim); white-space: nowrap; flex-shrink: 0; }
+ 
+  /* TIMELINE */
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+ 
+  .timeline-item {
+    display: flex;
+    gap: 14px;
+    position: relative;
+    padding-bottom: 16px;
+  }
+ 
+  .timeline-item::after {
+    content:'';
+    position:absolute;
+    left: 16px;
+    top: 28px;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--border-glow), transparent);
+  }
+ 
+  .timeline-item:last-child::after { display:none; }
+  .timeline-item:last-child { padding-bottom: 0; }
+ 
+  .timeline-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .tl-alert { background: rgba(255,56,96,0.15); border: 1px solid rgba(255,56,96,0.4); }
+  .tl-warn { background: rgba(255,179,0,0.15); border: 1px solid rgba(255,179,0,0.4); }
+  .tl-block { background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.4); }
+  .tl-info { background: rgba(0,200,255,0.15); border: 1px solid rgba(0,200,255,0.4); }
+  .tl-ok { background: rgba(0,255,136,0.15); border: 1px solid rgba(0,255,136,0.4); }
+ 
+  .timeline-content { flex: 1; padding-top: 4px; }
+  .timeline-time { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 3px; }
+  .timeline-text { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); line-height: 1.4; }
+  .timeline-text strong { color: var(--text-primary); font-weight: 400; }
+ 
+  /* NETWORK TABLE */
+  .net-row-suspicious td { background: rgba(255,56,96,0.04) !important; }
+  .net-row-suspicious td:first-child { border-left: 2px solid var(--red); }
+ 
+  /* FRAUD */
+  .fraud-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    margin-bottom: 8px;
+    transition: border-color 0.3s;
+  }
+  .fraud-item.critical { border-color: rgba(255,56,96,0.3); }
+  .fraud-item.warning { border-color: rgba(255,179,0,0.3); }
+ 
+  .fraud-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .fraud-item.critical .fraud-icon { background: rgba(255,56,96,0.12); }
+  .fraud-item.warning .fraud-icon { background: rgba(255,179,0,0.12); }
+ 
+  .fraud-info { flex: 1; }
+  .fraud-title { font-family: var(--font-mono); font-size: 11px; color: var(--text-primary); margin-bottom: 3px; }
+  .fraud-detail { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
+ 
+  .fraud-amount {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .fraud-item.critical .fraud-amount { color: var(--red); }
+  .fraud-item.warning .fraud-amount { color: var(--amber); }
+ 
+  /* BLOCKED LIST */
+  .blocked-list { display: flex; flex-direction: column; gap: 6px; }
+ 
+  .blocked-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: rgba(255,56,96,0.05);
+    border: 1px solid rgba(255,56,96,0.15);
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+ 
+  .blocked-ip { color: var(--red); }
+  .blocked-reason { color: var(--text-dim); font-size: 9px; letter-spacing: 1px; }
+  .blocked-time { color: var(--text-dim); font-size: 9px; }
+ 
+  /* ML MODEL STATUS */
+  .ml-status {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+ 
+  .ml-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+  }
+ 
+  .ml-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .ml-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse-anim 2s infinite; }
+ 
+  .ml-name { font-family: var(--font-mono); font-size: 10px; color: var(--text-primary); flex: 1; letter-spacing: 1px; }
+  .ml-acc { font-family: var(--font-display); font-size: 13px; color: var(--cyan); }
+ 
+  .ml-bar-wrap { width: 80px; height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+  .ml-bar-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--green)); border-radius: 2px; }
+ 
+  /* CONTROL BAR */
+  .control-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+ 
+  .btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid;
+    text-transform: uppercase;
+  }
+ 
+  .btn-primary { background: rgba(0,200,255,0.1); color: var(--cyan); border-color: rgba(0,200,255,0.3); }
+  .btn-primary:hover { background: rgba(0,200,255,0.2); box-shadow: 0 0 16px rgba(0,200,255,0.2); }
+ 
+  .btn-danger { background: rgba(255,56,96,0.1); color: var(--red); border-color: rgba(255,56,96,0.3); }
+  .btn-danger:hover { background: rgba(255,56,96,0.2); box-shadow: 0 0 16px rgba(255,56,96,0.2); }
+ 
+  .btn-success { background: rgba(0,255,136,0.1); color: var(--green); border-color: rgba(0,255,136,0.3); }
+  .btn-success:hover { background: rgba(0,255,136,0.2); box-shadow: 0 0 16px rgba(0,255,136,0.2); }
+ 
+  .sim-status {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-left: auto;
+    letter-spacing: 2px;
+  }
+ 
+  /* FOOTER */
+  .footer {
+    border-top: 1px solid var(--border-dim);
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    position: relative;
+    z-index: 1;
+  }
+ 
+  /* SCROLL ANIMATE */
+  @keyframes blink {
+    0%,100% { opacity:1; }
+    50% { opacity:0; }
+  }
+ 
+  .blink { animation: blink 1s step-end infinite; }
+ 
+  /* Corner decorations */
+  .corner-deco {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+  }
+  .corner-deco.tl { top: 8px; left: 8px; border-top: 1px solid var(--cyan-dim); border-left: 1px solid var(--cyan-dim); }
+  .corner-deco.tr { top: 8px; right: 8px; border-top: 1px solid var(--cyan-dim); border-right: 1px solid var(--cyan-dim); }
+  .corner-deco.bl { bottom: 8px; left: 8px; border-bottom: 1px solid var(--cyan-dim); border-left: 1px solid var(--cyan-dim); }
+  .corner-deco.br { bottom: 8px; right: 8px; border-bottom: 1px solid var(--cyan-dim); border-right: 1px solid var(--cyan-dim); }
+ 
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg-void); }
+  ::-webkit-scrollbar-thumb { background: var(--border-glow); border-radius: 2px; }
+ 
+  /* RESPONSIVE */
+  @media (max-width: 1200px) {
+    .metrics-row { grid-template-columns: repeat(3, 1fr); }
+    .grid-65-35, .grid-35-65 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 800px) {
+    .metrics-row { grid-template-columns: 1fr 1fr; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+ 
+  /* Table overflow */
+  .table-wrap { overflow-x: auto; }
+  .table-wrap::-webkit-scrollbar { height: 3px; }
+ 
+  /* Typewriter effect for feed */
+  .typewriter { overflow: hidden; white-space: nowrap; }
+ 
+  /* Glow text */
+  .glow-red { color: var(--red); text-shadow: 0 0 8px rgba(255,56,96,0.5); }
+  .glow-green { color: var(--green); text-shadow: 0 0 8px rgba(0,255,136,0.5); }
+  .glow-cyan { color: var(--cyan); text-shadow: 0 0 8px rgba(0,200,255,0.5); }
+  .glow-amber { color: var(--amber); text-shadow: 0 0 8px rgba(255,179,0,0.5); }
+ 
+  /* Map dots */
+  .geo-map {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 8px;
+    height: 140px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+ 
+  .geo-map svg { width:100%; height:100%; opacity:0.25; }
+ 
+  .geo-dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+ 
+  .geo-dot::after {
+    content:'';
+    position:absolute;
+    inset:-4px;
+    border-radius:50%;
+    border: 1px solid currentColor;
+    opacity: 0.4;
+    animation: geo-ping 2s ease-out infinite;
+  }
+ 
+  @keyframes geo-ping {
+    from { transform:scale(1); opacity:0.4; }
+    to { transform:scale(3); opacity:0; }
+  }
+</style>
+</head>
+<body>
+ 
+<!-- HEADER -->
+<header class="header">
+  <div class="header-logo">
+    <div class="logo-icon"></div>
+    <div>
+      <div class="logo-text">NEXUS SOC</div>
+      <div class="logo-sub">BANKING CYBER DEFENSE PLATFORM v4.2.1</div>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="status-badge">
+      <div class="pulse-dot green"></div>
+      ALL SYSTEMS OPERATIONAL
+    </div>
+    <div class="status-badge">
+      <div class="pulse-dot red"></div>
+      <span id="threat-count">3 ACTIVE THREATS</span>
+    </div>
+    <div class="status-badge">
+      <div class="pulse-dot amber"></div>
+      SIMULATION MODE
+    </div>
+    <div class="header-time" id="clock">--:--:--</div>
+  </div>
+</header>
+ 
+<main class="main">
+ 
+  <!-- CONTROL BAR -->
+  <div class="control-bar">
+    <button class="btn btn-success" onclick="startSimulation()">▶ START SIMULATION</button>
+    <button class="btn btn-danger" onclick="triggerAttack()">⚡ SIMULATE ATTACK</button>
+    <button class="btn btn-primary" onclick="resetSystem()">↺ RESET SYSTEM</button>
+    <span class="sim-status" id="sim-status">● SIMULATION READY — CLICK START TO BEGIN</span>
+  </div>
+ 
+  <!-- METRICS ROW -->
+  <div class="section-title">SYSTEM OVERVIEW</div>
+  <div class="metrics-row">
+    <div class="metric-card cyan">
+      <div class="corner-deco tl"></div><div class="corner-deco br"></div>
+      <div class="metric-label">Total Transactions</div>
+      <div class="metric-value" id="m-transactions">48,291</div>
+      <div class="metric-delta">↑ +1,204 in last hour</div>
+      <div class="metric-icon">⬡</div>
+    </div>
+    <div class="metric-card red">
+      <div class="corner-deco tl"></div><div class="corner-deco br"></div>
+      <div class="metric-label">Suspicious Activity</div>
+      <div class="metric-value" id="m-suspicious">127</div>
+      <div class="metric-delta">↑ +23 new alerts</div>
+      <div class="metric-icon">⚠</div>
+    </div>
+    <div class="metric-card green">
+      <div class="corner-deco tl"></div><div class="corner-deco br"></div>
+      <div class="metric-label">Active Users</div>
+      <div class="metric-value" id="m-users">3,847</div>
+      <div class="metric-delta">↓ -12 from peak</div>
+      <div class="metric-icon">◈</div>
+    </div>
+    <div class="metric-card amber">
+      <div class="corner-deco tl"></div><div class="corner-deco br"></div>
+      <div class="metric-label">Blocked IPs</div>
+      <div class="metric-value" id="m-blocked-ip">34</div>
+      <div class="metric-delta">+7 auto-blocked today</div>
+      <div class="metric-icon">⊘</div>
+    </div>
+    <div class="metric-card purple">
+      <div class="corner-deco tl"></div><div class="corner-deco br"></div>
+      <div class="metric-label">Blocked MACs</div>
+      <div class="metric-value" id="m-blocked-mac">19</div>
+      <div class="metric-delta">+4 device blocks today</div>
+      <div class="metric-icon">⬡</div>
+    </div>
+  </div>
+ 
+  <!-- ROW 1: Transaction chart + Auth monitor -->
+  <div class="grid-65-35">
+    <div class="panel">
+      <div class="corner-deco tl"></div><div class="corner-deco tr"></div>
+      <div class="panel-header">
+        <span class="panel-title">Transaction Volume & Anomaly Score</span>
+        <span class="panel-badge badge-live">● LIVE</span>
+      </div>
+      <div class="chart-wrap-lg">
+        <canvas id="transactionChart"></canvas>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="corner-deco tl"></div><div class="corner-deco tr"></div>
+      <div class="panel-header">
+        <span class="panel-title">Auth Method Distribution</span>
+        <span class="panel-badge badge-info">REALTIME</span>
+      </div>
+      <div class="chart-wrap" style="height:160px; padding:0 10px;">
+        <canvas id="authChart"></canvas>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+        <span class="auth-method auth-fp">◈ FINGERPRINT 42%</span>
+        <span class="auth-method auth-face">◈ FACIAL 28%</span>
+        <span class="auth-method auth-pat">◈ PATTERN 18%</span>
+        <span class="auth-method auth-pwd">◈ PASSWORD 12%</span>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ROW 2: Auth table + Agents + Threat score -->
+  <div class="section-title">AUTHENTICATION MONITORING</div>
+  <div class="grid-65-35">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Authentication Attempts — Anomaly Detection</span>
+        <span class="panel-badge badge-warn" id="auth-alert-badge">⚠ 3 ANOMALIES</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="auth-table">
+          <thead>
+            <tr>
+              <th>USER ID</th>
+              <th>AUTH METHOD</th>
+              <th>DEVICE</th>
+              <th>IP ADDRESS</th>
+              <th>LOCATION</th>
+              <th>TIME</th>
+              <th>STATUS</th>
+              <th>ANOMALY</th>
+            </tr>
+          </thead>
+          <tbody id="auth-tbody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <!-- Threat Score -->
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="panel-header">
+          <span class="panel-title">Network Threat Score</span>
+          <span class="panel-badge badge-alert">CRITICAL</span>
+        </div>
+        <div class="threat-gauge-wrap">
+          <div class="threat-score-ring">
+            <svg viewBox="0 0 120 120" width="120" height="120">
+              <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,56,96,0.1)" stroke-width="8"/>
+              <circle cx="60" cy="60" r="48" fill="none" stroke="url(#threatGrad)" stroke-width="8"
+                stroke-dasharray="301.6" stroke-dashoffset="75.4" stroke-linecap="round" id="threat-ring"/>
+              <defs>
+                <linearGradient id="threatGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#ff3860"/>
+                  <stop offset="100%" stop-color="#ffb300"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="threat-score-label">
+              <div class="threat-score-num" id="threat-score">75</div>
+              <div class="threat-score-unit">THREAT</div>
+            </div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);letter-spacing:2px;text-align:center;">
+            THRESHOLD: 60 | STATUS: <span class="glow-red">ELEVATED</span>
+          </div>
+        </div>
+      </div>
+      <!-- ML Models -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">ML Model Status</span>
+          <span class="panel-badge badge-live">● ACTIVE</span>
+        </div>
+        <div class="ml-status">
+          <div class="ml-item">
+            <div class="ml-dot active"></div>
+            <div class="ml-name">ISOLATION FOREST</div>
+            <div class="ml-bar-wrap"><div class="ml-bar-fill" style="width:94%"></div></div>
+            <div class="ml-acc glow-cyan">94.2%</div>
+          </div>
+          <div class="ml-item">
+            <div class="ml-dot active"></div>
+            <div class="ml-name">RANDOM FOREST</div>
+            <div class="ml-bar-wrap"><div class="ml-bar-fill" style="width:97%"></div></div>
+            <div class="ml-acc glow-cyan">97.1%</div>
+          </div>
+          <div class="ml-item">
+            <div class="ml-dot active"></div>
+            <div class="ml-name">LSTM BEHAVIOR</div>
+            <div class="ml-bar-wrap"><div class="ml-bar-fill" style="width:91%"></div></div>
+            <div class="ml-acc glow-cyan">91.8%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ROW 3: Network + Fraud -->
+  <div class="grid-2">
+    <!-- Network Monitor -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Network Monitoring — Device Tracker</span>
+        <span class="panel-badge badge-alert">⚠ 2 SUSPICIOUS</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="network-table">
+          <thead>
+            <tr>
+              <th>IP ADDRESS</th>
+              <th>MAC ADDRESS</th>
+              <th>DEVICE TYPE</th>
+              <th>LOGIN FREQ</th>
+              <th>LOCATION</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody id="network-tbody"></tbody>
+        </table>
+      </div>
+      <div class="geo-map" id="geo-map">
+        <!-- SVG world outline simplified -->
+        <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+          <path fill="none" stroke="rgba(0,200,255,0.4)" stroke-width="1"
+            d="M80,120 Q150,90 200,110 Q260,80 300,100 Q380,60 450,90 Q520,70 580,100 Q650,80 720,110
+               M200,110 Q210,150 230,180 Q250,220 220,250 Q190,280 200,310
+               M300,100 Q320,140 310,180 Q300,220 320,260
+               M450,90 Q460,130 440,170 Q420,210 450,250 Q470,280 450,310
+               M150,180 Q180,210 160,240 Q140,270 150,300
+               M580,100 Q600,150 590,190 Q570,230 580,270
+               M100,200 Q80,230 100,260 Q120,290 100,320
+               M700,160 Q720,190 710,220 Q690,250 700,280"/>
+        </svg>
+        <div id="geo-dots"></div>
+      </div>
+    </div>
+    <!-- Fraud Detection -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Fraud Detection — Transaction Monitor</span>
+        <span class="panel-badge badge-alert">🔴 CRITICAL ALERT</span>
+      </div>
+      <div id="fraud-list">
+        <div class="fraud-item critical">
+          <div class="fraud-icon">🔴</div>
+          <div class="fraud-info">
+            <div class="fraud-title">RAPID TRANSFER — USR_4421 → UNKNOWN ACCT</div>
+            <div class="fraud-detail">7 TRANSFERS IN 12 SECONDS · 192.168.4.22 · MUMBAI</div>
+          </div>
+          <div class="fraud-amount">₹8,40,000</div>
+        </div>
+        <div class="fraud-item critical">
+          <div class="fraud-icon">🔴</div>
+          <div class="fraud-info">
+            <div class="fraud-title">LARGE TRANSFER — ACC_7892 → OFFSHORE</div>
+            <div class="fraud-detail">EXCEEDS 10X BASELINE · 185.220.101.44 · UNKNOWN</div>
+          </div>
+          <div class="fraud-amount">₹52,00,000</div>
+        </div>
+        <div class="fraud-item warning">
+          <div class="fraud-icon">🟡</div>
+          <div class="fraud-info">
+            <div class="fraud-title">VELOCITY SPIKE — USR_1190 MULTIPLE TXN</div>
+            <div class="fraud-detail">PATTERN DEVIATION 3.4σ · 10.0.0.88 · DELHI</div>
+          </div>
+          <div class="fraud-amount">₹2,15,000</div>
+        </div>
+        <div class="fraud-item warning">
+          <div class="fraud-icon">🟡</div>
+          <div class="fraud-info">
+            <div class="fraud-title">NEW BENEFICIARY — USR_2234 FIRST INTL TXN</div>
+            <div class="fraud-detail">UNKNOWN ACCOUNT · 172.16.8.44 · PUNE</div>
+          </div>
+          <div class="fraud-amount">₹95,000</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:120px;margin-top:12px;">
+        <canvas id="fraudChart"></canvas>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ROW 4: Agents + Timeline + Feed -->
+  <div class="grid-3">
+    <!-- Agents -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Multi-Agent System</span>
+        <span class="panel-badge badge-live">● 4 AGENTS ACTIVE</span>
+      </div>
+      <div class="agents-grid">
+        <div class="agent-card active" id="agent-net">
+          <div class="agent-header">
+            <div class="agent-name">⬡ NET MONITOR</div>
+            <div class="agent-status on">ACTIVE</div>
+          </div>
+          <div class="agent-metric" id="agent-net-val">2,841</div>
+          <div class="agent-desc">PACKETS / SEC</div>
+          <div class="agent-progress"><div class="agent-progress-fill" style="width:72%"></div></div>
+        </div>
+        <div class="agent-card warning" id="agent-auth">
+          <div class="agent-header">
+            <div class="agent-name">◈ AUTH AGENT</div>
+            <div class="agent-status alert">ALERT</div>
+          </div>
+          <div class="agent-metric" id="agent-auth-val">3</div>
+          <div class="agent-desc">ANOMALIES FOUND</div>
+          <div class="agent-progress"><div class="agent-progress-fill" style="width:85%"></div></div>
+        </div>
+        <div class="agent-card warning" id="agent-fraud">
+          <div class="agent-header">
+            <div class="agent-name">₹ FRAUD AGENT</div>
+            <div class="agent-status alert">ALERT</div>
+          </div>
+          <div class="agent-metric" id="agent-fraud-val">2</div>
+          <div class="agent-desc">CRITICAL EVENTS</div>
+          <div class="agent-progress"><div class="agent-progress-fill" style="width:90%"></div></div>
+        </div>
+        <div class="agent-card scanning" id="agent-threat">
+          <div class="agent-header">
+            <div class="agent-name">⚡ RESP AGENT</div>
+            <div class="agent-status scan">SCANNING</div>
+          </div>
+          <div class="agent-metric" id="agent-threat-val">34</div>
+          <div class="agent-desc">IPS BLOCKED</div>
+          <div class="agent-progress"><div class="agent-progress-fill" style="width:55%"></div></div>
+        </div>
+      </div>
+      <!-- Blocked IPs -->
+      <div style="margin-top:14px;">
+        <div class="section-title" style="margin-bottom:8px;font-size:9px;">BLOCKED ADDRESSES</div>
+        <div class="blocked-list" id="blocked-list">
+          <div class="blocked-item">
+            <span class="blocked-ip">185.220.101.44</span>
+            <span class="blocked-reason">RAPID FRAUD</span>
+            <span class="blocked-time">09:47</span>
+          </div>
+          <div class="blocked-item">
+            <span class="blocked-ip">45.142.212.100</span>
+            <span class="blocked-reason">BRUTE FORCE</span>
+            <span class="blocked-time">09:52</span>
+          </div>
+          <div class="blocked-item">
+            <span class="blocked-ip">192.168.4.22</span>
+            <span class="blocked-reason">ANOMALY SCORE</span>
+            <span class="blocked-time">10:01</span>
+          </div>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- Timeline -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Attack Timeline</span>
+        <span class="panel-badge badge-info">SESSION LOG</span>
+      </div>
+      <div class="timeline" id="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot tl-info">ℹ</div>
+          <div class="timeline-content">
+            <div class="timeline-time">09:41:08 — NETWORK AGENT</div>
+            <div class="timeline-text">System scan initiated. <strong>48,291 baseline transactions</strong> established. All agents online.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot tl-warn">⚠</div>
+          <div class="timeline-content">
+            <div class="timeline-time">09:47:22 — AUTH AGENT</div>
+            <div class="timeline-text"><strong>USR_4421</strong> changed auth from <strong>FINGERPRINT → PATTERN</strong>. Unknown device. Anomaly score: 74.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot tl-alert">🔴</div>
+          <div class="timeline-content">
+            <div class="timeline-time">09:48:05 — FRAUD AGENT</div>
+            <div class="timeline-text">Rapid transfer burst detected. <strong>7 transactions in 12s</strong> from USR_4421. Total: ₹8,40,000.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot tl-alert">🔴</div>
+          <div class="timeline-content">
+            <div class="timeline-time">09:49:11 — THREAT AGENT</div>
+            <div class="timeline-text">Threat score exceeded threshold (75 > 60). <strong>Account USR_4421 frozen.</strong> MFA triggered.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot tl-block">⊘</div>
+          <div class="timeline-content">
+            <div class="timeline-time">09:49:14 — RESPONSE AGENT</div>
+            <div class="timeline-text">IP <strong>185.220.101.44</strong> and MAC <strong>A4:B2:C8:D1:E9:F2</strong> added to blocklist.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot tl-warn">⚠</div>
+          <div class="timeline-content">
+            <div class="timeline-time">09:52:33 — NET AGENT</div>
+            <div class="timeline-text">Brute force attempt from <strong>45.142.212.100</strong>. 247 failed logins in 60s. Auto-blocked.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot tl-ok">✓</div>
+          <div class="timeline-content">
+            <div class="timeline-time">10:01:44 — ALL AGENTS</div>
+            <div class="timeline-text">Threat contained. Dashboard <strong>updated</strong>. Incident report filed. Security team notified.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- Live Feed -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Live Threat Feed</span>
+        <span class="panel-badge badge-live">● STREAMING</span>
+      </div>
+      <div class="feed-list" id="feed-list">
+        <div class="feed-item alert">
+          <span class="feed-type">ALERT</span>
+          <span class="feed-msg">Suspicious login detected for USR_4421 — auth method change</span>
+          <span class="feed-time">09:47</span>
+        </div>
+        <div class="feed-item block">
+          <span class="feed-type">BLOCKED</span>
+          <span class="feed-msg">IP 185.220.101.44 blocked — rapid fraud transactions</span>
+          <span class="feed-time">09:49</span>
+        </div>
+        <div class="feed-item warn">
+          <span class="feed-type">WARNING</span>
+          <span class="feed-msg">Authentication pattern anomaly — USR_1190 login from unknown device</span>
+          <span class="feed-time">09:51</span>
+        </div>
+        <div class="feed-item block">
+          <span class="feed-type">BLOCKED</span>
+          <span class="feed-msg">IP 45.142.212.100 blocked — 247 failed login attempts detected</span>
+          <span class="feed-time">09:52</span>
+        </div>
+        <div class="feed-item alert">
+          <span class="feed-type">ALERT</span>
+          <span class="feed-msg">Large offshore transfer flagged — ACC_7892 → Unknown Acct ₹52L</span>
+          <span class="feed-time">09:55</span>
+        </div>
+        <div class="feed-item info">
+          <span class="feed-type">INFO</span>
+          <span class="feed-msg">Isolation Forest model retrained — 94.2% accuracy on new dataset</span>
+          <span class="feed-time">10:00</span>
+        </div>
+        <div class="feed-item ok">
+          <span class="feed-type">RESOLVED</span>
+          <span class="feed-msg">USR_4421 account verified via MFA — threat score reduced to 22</span>
+          <span class="feed-time">10:03</span>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+</main>
+ 
+<footer class="footer">
+  <span>NEXUS SOC · MULTI-AGENT BANKING CYBER DEFENSE · BUILD 2025.03.14</span>
+  <span>ENCRYPTION: AES-256 · TLS 1.3 · FIPS 140-2 COMPLIANT</span>
+  <span>INSPIRED BY: COSMOS BANK (2018) · UNION BANK SWIFT (2016)</span>
+</footer>
+ 
+<script src="dashboard.js"></script>
+</body>
+</html>
