@@ -94,5 +94,6 @@ document.addEventListener("DOMContentLoaded", () => {
   updateClock();
 
   loadDashboard();
+  setInterval(loadDashboard, 5000);
 
 });
