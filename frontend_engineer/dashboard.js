@@ -2,7 +2,7 @@
 // NEXUS SOC — Banking Cyber Defense Dashboard Engine
 // ============================================================
 
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = "http://localhost:8000";
 
 // --- Global Chart Variables ---
 let txChart, authChart, fraudChart;
