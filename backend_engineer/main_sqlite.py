@@ -227,7 +227,16 @@ async def process_login(data: LoginRequest):
         "require_mfa": anomaly_score > 50,
         "flags": device_trust.get("flags", [])
     }
-
+@app.post("/api/auth/validate-id")
+async def validate_id(data: dict):
+    user_id = data.get("user_id")
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    db.close()
+    
+    if not user:
+        return {"valid": False, "error": "INVALID USER ID — ACCESS DENIED"}
+    return {"valid": True}
 # Transaction fraud analysis
 # Transaction fraud analysis
 @app.post("/api/transaction/analyze")
