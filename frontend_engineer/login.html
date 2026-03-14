@@ -124,7 +124,6 @@
     text-shadow:0 0 16px var(--cyan);
   }
 
-  /* Rotating border */
   .logo-ring::after {
     content:'';
     position:absolute; inset:-6px;
@@ -184,7 +183,7 @@
   /* AUTH METHOD TABS */
   .auth-tabs {
     display:grid;
-    grid-template-columns:repeat(4,1fr);
+    grid-template-columns:repeat(3,1fr);
     gap:6px;
     margin-bottom:24px;
   }
@@ -251,9 +250,6 @@
     box-shadow:0 0 16px rgba(0,200,255,0.08);
   }
 
-  .form-input:focus::placeholder { opacity:0; }
-
-  /* Password field with toggle */
   .input-wrap { position:relative; }
 
   .input-icon {
@@ -401,31 +397,8 @@
   }
 
   .btn-login:hover::before { left:130%; }
-
   .btn-login:active { transform:translateY(0); }
-
-  .btn-login.loading {
-    pointer-events:none;
-    opacity:0.7;
-  }
-
-  /* DIVIDER */
-  .divider {
-    display:flex; align-items:center; gap:12px;
-    margin:20px 0;
-  }
-
-  .divider-line {
-    flex:1; height:1px;
-    background:var(--border-dim);
-  }
-
-  .divider-text {
-    font-family:var(--font-mono);
-    font-size:9px;
-    color:var(--text-dim);
-    letter-spacing:2px;
-  }
+  .btn-login.loading { pointer-events:none; opacity:0.7; }
 
   /* MFA section */
   .mfa-section {
@@ -445,9 +418,7 @@
     text-align:center;
   }
 
-  .otp-inputs {
-    display:flex; gap:8px; justify-content:center;
-  }
+  .otp-inputs { display:flex; gap:8px; justify-content:center; }
 
   .otp-input {
     width:42px; height:48px;
@@ -497,7 +468,6 @@
     line-height:2;
   }
 
-  /* Security indicators */
   .security-row {
     display:flex; justify-content:center; gap:20px;
     margin-top:16px;
@@ -518,10 +488,7 @@
     animation:pulse-dot 2s ease-in-out infinite;
   }
 
-  @keyframes pulse-dot {
-    0%,100% { opacity:1; }
-    50% { opacity:0.4; }
-  }
+  @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 
   /* Threat indicator */
   .threat-bar {
@@ -560,12 +527,6 @@
     color:var(--green);
     white-space:nowrap;
   }
-
-  /* Responsive */
-  @media(max-width:480px) {
-    .login-card { padding:24px 18px; }
-    .auth-tabs { grid-template-columns:repeat(2,1fr); }
-  }
 </style>
 </head>
 <body>
@@ -576,28 +537,24 @@
 
 <div class="login-wrapper">
 
-  <!-- HEADER -->
   <div class="login-header">
     <div class="logo-ring"></div>
     <div class="login-title">NEXUS SOC</div>
     <div class="login-subtitle">Banking Cyber Defense Platform · Secure Access</div>
   </div>
 
-  <!-- CARD -->
   <div class="login-card">
     <div class="corner tl"></div>
     <div class="corner tr"></div>
     <div class="corner bl"></div>
     <div class="corner br"></div>
 
-    <!-- Threat level bar -->
     <div class="threat-bar">
       <span class="threat-label">NETWORK THREAT</span>
       <div class="threat-track"><div class="threat-fill" id="threat-fill"></div></div>
       <span class="threat-val" id="threat-val">LOW</span>
     </div>
 
-    <!-- Auth method selector -->
     <div class="auth-tabs">
       <div class="auth-tab active" onclick="switchAuth('password')" id="tab-password">
         <span class="auth-tab-icon">🔑</span>
@@ -607,71 +564,48 @@
         <span class="auth-tab-icon">👆</span>
         FINGER
       </div>
-      <div class="auth-tab" onclick="switchAuth('facial')" id="tab-facial">
-        <span class="auth-tab-icon">👤</span>
-        FACIAL
-      </div>
       <div class="auth-tab" onclick="switchAuth('pattern')" id="tab-pattern">
         <span class="auth-tab-icon">⬡</span>
         PATTERN
       </div>
     </div>
 
-    <!-- Status message -->
     <div class="status-msg" id="status-msg">
       <span id="status-icon">⚠</span>
       <span id="status-text"></span>
     </div>
 
-    <!-- FORM -->
     <form onsubmit="handleLogin(event)">
 
-      <!-- User ID -->
       <div class="form-group">
         <label class="form-label">User ID / Employee Code</label>
         <div class="input-wrap">
-          <input type="text" class="form-input" id="user-id"
-                 placeholder="USR_XXXX" autocomplete="off" required/>
+          <input type="text" class="form-input" id="user-id" placeholder="USR_XXXX" autocomplete="off" required/>
         </div>
       </div>
 
-      <!-- Password section -->
       <div id="password-section">
         <div class="form-group">
           <label class="form-label">Password</label>
           <div class="input-wrap">
-            <input type="password" class="form-input" id="password"
-                   placeholder="Enter secure password" style="padding-right:44px"/>
+            <input type="password" class="form-input" id="password" placeholder="Enter secure password" style="padding-right:44px"/>
             <span class="input-icon" onclick="togglePassword()">👁</span>
           </div>
         </div>
       </div>
 
-      <!-- Fingerprint section -->
       <div class="bio-panel" id="fingerprint-section">
-        <div class="bio-scanner" id="fp-scanner" onclick="scanBiometric('fingerprint')">
+        <div class="bio-scanner" id="fp-scanner" onclick="triggerHardwareFingerprint()">
           👆
         </div>
-        <div class="bio-status" id="fp-status">TAP TO SCAN FINGERPRINT</div>
+        <div class="bio-status" id="fp-status">TAP TO SCAN HARDWARE FINGERPRINT</div>
       </div>
 
-      <!-- Facial section -->
-      <div class="bio-panel" id="facial-section">
-        <div class="bio-scanner" id="face-scanner" onclick="scanBiometric('facial')">
-          👤
-        </div>
-        <div class="bio-status" id="face-status">TAP TO START FACIAL SCAN</div>
-      </div>
-
-      <!-- Pattern section -->
       <div class="pattern-grid" id="pattern-section">
-        <div class="pattern-dots" id="pattern-dots">
-          <!-- 9 dots generated by JS -->
-        </div>
+        <div class="pattern-dots" id="pattern-dots"></div>
         <div class="pattern-display" id="pattern-display">DRAW YOUR PATTERN</div>
       </div>
 
-      <!-- MFA section (shown after first factor) -->
       <div class="mfa-section" id="mfa-section">
         <div class="mfa-label">⚠ MFA REQUIRED — ENTER OTP FROM AUTHENTICATOR</div>
         <div class="otp-inputs">
@@ -684,16 +618,13 @@
         </div>
       </div>
 
-      <!-- Submit -->
       <button type="submit" class="btn-login" id="login-btn">
         ▶ AUTHENTICATE
       </button>
 
     </form>
-
   </div>
 
-  <!-- FOOTER -->
   <div class="login-footer">
     <div class="security-row">
       <div class="sec-badge"><div class="sec-dot"></div> TLS 1.3</div>
@@ -706,78 +637,90 @@
 </div>
 
 <script>
-// ── Config ────────────────────────────────────────────────────
 const BACKEND_URL = "http://localhost:8000";
 let currentMethod = "password";
 let patternSequence = [];
 let bioScanned = false;
 
-// ── Auth method switching ─────────────────────────────────────
 function switchAuth(method) {
   currentMethod = method;
-
-  // Update tabs
   document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
   document.getElementById(`tab-${method}`).classList.add('active');
 
-  // Hide all sections
   document.getElementById('password-section').style.display = 'none';
   document.getElementById('fingerprint-section').classList.remove('show');
-  document.getElementById('facial-section').classList.remove('show');
   document.getElementById('pattern-section').classList.remove('show');
 
-  // Show selected
   if (method === 'password') {
     document.getElementById('password-section').style.display = 'block';
   } else if (method === 'fingerprint') {
     document.getElementById('fingerprint-section').classList.add('show');
-    resetBio('fingerprint');
-  } else if (method === 'facial') {
-    document.getElementById('facial-section').classList.add('show');
-    resetBio('facial');
+    resetBio();
   } else if (method === 'pattern') {
     document.getElementById('pattern-section').classList.add('show');
     buildPatternDots();
   }
-
   hideStatus();
 }
 
-// ── Biometric scanner ─────────────────────────────────────────
-function scanBiometric(type) {
-  const scannerId = type === 'fingerprint' ? 'fp-scanner' : 'face-scanner';
-  const statusId  = type === 'fingerprint' ? 'fp-status'  : 'face-status';
-  const scanner   = document.getElementById(scannerId);
-  const status    = document.getElementById(statusId);
+// ── ACTUAL HARDWARE FINGERPRINT LOGIC (WebAuthn) ──────────────
+async function triggerHardwareFingerprint() {
+  const scanner = document.getElementById('fp-scanner');
+  const status = document.getElementById('fp-status');
+
+  // Check if browser supports hardware biometrics
+  if (!window.PublicKeyCredential) {
+    showStatus('error', 'BIOMETRICS NOT SUPPORTED ON THIS BROWSER');
+    return;
+  }
 
   scanner.classList.add('scanning');
-  status.textContent = 'SCANNING...';
-  status.style.color = 'var(--cyan)';
+  status.textContent = 'WAITING FOR OS BIOMETRIC SCANNER...';
+  status.style.color = 'var(--amber)';
 
-  setTimeout(() => {
+  try {
+    // This generates a secure random challenge to trigger Windows Hello / Mac TouchID
+    const challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
+
+    // Call the Operating System's Native Hardware Prompt
+    const credential = await navigator.credentials.get({
+      publicKey: {
+        challenge: challenge,
+        timeout: 60000,
+        userVerification: "required" // Forces actual biometric check, not just clicking OK
+      }
+    });
+
+    // If the OS approves the fingerprint:
     scanner.classList.remove('scanning');
     bioScanned = true;
-    status.textContent = '✓ SCAN COMPLETE — PROCEED TO LOGIN';
+    status.textContent = '✓ SECURE FINGERPRINT VERIFIED';
     status.style.color = 'var(--green)';
     scanner.style.borderColor = 'var(--green)';
     scanner.style.boxShadow   = '0 0 20px rgba(0,255,136,0.3)';
-  }, 2000);
+
+  } catch (err) {
+    // If the user hits cancel or scan fails
+    scanner.classList.remove('scanning');
+    status.textContent = '✗ OS SCAN CANCELLED OR FAILED';
+    status.style.color = 'var(--red)';
+    scanner.style.borderColor = 'var(--red)';
+  }
 }
 
-function resetBio(type) {
+function resetBio() {
   bioScanned = false;
-  const scannerId = type === 'fingerprint' ? 'fp-scanner' : 'face-scanner';
-  const statusId  = type === 'fingerprint' ? 'fp-status'  : 'face-status';
-  const scanner   = document.getElementById(scannerId);
-  const status    = document.getElementById(statusId);
+  const scanner = document.getElementById('fp-scanner');
+  const status = document.getElementById('fp-status');
   scanner.classList.remove('scanning');
   scanner.style.borderColor = 'var(--cyan)';
   scanner.style.boxShadow   = '0 0 20px rgba(0,200,255,0.2)';
-  status.textContent = type === 'fingerprint' ? 'TAP TO SCAN FINGERPRINT' : 'TAP TO START FACIAL SCAN';
+  status.textContent = 'TAP TO SCAN HARDWARE FINGERPRINT';
   status.style.color = 'var(--text-secondary)';
 }
 
-// ── Pattern lock ──────────────────────────────────────────────
+// ── PATTERN LOGIC ─────────────────────────────────────────────
 function buildPatternDots() {
   patternSequence = [];
   const grid = document.getElementById('pattern-dots');
@@ -786,10 +729,12 @@ function buildPatternDots() {
     const dot = document.createElement('div');
     dot.className = 'pattern-dot';
     dot.dataset.i = i;
+    // Sequential clicking logic for pattern
     dot.onclick = () => selectDot(i, dot);
     grid.appendChild(dot);
   }
-  document.getElementById('pattern-display').textContent = 'DRAW YOUR PATTERN';
+  document.getElementById('pattern-display').textContent = 'CLICK DOTS TO SET PATTERN';
+  document.getElementById('pattern-display').style.color = 'var(--cyan)';
 }
 
 function selectDot(index, dot) {
@@ -798,19 +743,18 @@ function selectDot(index, dot) {
   dot.classList.add('selected');
   const display = document.getElementById('pattern-display');
   display.textContent = '● '.repeat(patternSequence.length).trim();
+  
   if (patternSequence.length >= 4) {
     display.style.color = 'var(--green)';
     display.textContent += '  ✓ PATTERN SET';
   }
 }
 
-// ── Password visibility toggle ────────────────────────────────
 function togglePassword() {
   const input = document.getElementById('password');
   input.type = input.type === 'password' ? 'text' : 'password';
 }
 
-// ── OTP inputs ────────────────────────────────────────────────
 function otpNext(index) {
   const current = document.getElementById(`otp-${index}`);
   if (current.value && index < 5) {
@@ -818,7 +762,6 @@ function otpNext(index) {
   }
 }
 
-// ── Status messages ───────────────────────────────────────────
 function showStatus(type, text) {
   const msg  = document.getElementById('status-msg');
   const icon = document.getElementById('status-icon');
@@ -833,7 +776,6 @@ function hideStatus() {
   document.getElementById('status-msg').className = 'status-msg';
 }
 
-// ── Login handler ─────────────────────────────────────────────
 async function handleLogin(e) {
   e.preventDefault();
   const userId = document.getElementById('user-id').value.trim();
@@ -841,17 +783,16 @@ async function handleLogin(e) {
 
   if (!userId) { showStatus('error', 'USER ID IS REQUIRED'); return; }
 
-  // Validate auth method
-  if ((currentMethod === 'fingerprint' || currentMethod === 'facial') && !bioScanned) {
-    showStatus('error', `COMPLETE ${currentMethod.toUpperCase()} SCAN FIRST`);
+  // Enforce new security rules
+  if (currentMethod === 'fingerprint' && !bioScanned) {
+    showStatus('error', `COMPLETE HARDWARE FINGERPRINT SCAN FIRST`);
     return;
   }
   if (currentMethod === 'pattern' && patternSequence.length < 4) {
-    showStatus('error', 'PATTERN MUST BE AT LEAST 4 POINTS');
+    showStatus('error', 'PATTERN MUST CONNECT AT LEAST 4 DOTS');
     return;
   }
 
-  // Loading state
   btn.classList.add('loading');
   btn.textContent = '⟳ AUTHENTICATING...';
   hideStatus();
@@ -861,7 +802,7 @@ async function handleLogin(e) {
     auth_method: currentMethod.toUpperCase(),
     device_id:   getDeviceId(),
     ip_address:  '127.0.0.1',
-    location:    'Local',
+    location:    'Local'
   };
 
   try {
@@ -891,14 +832,11 @@ async function handleLogin(e) {
     if (data.success) {
       showStatus('success', `ACCESS GRANTED — ANOMALY SCORE: ${data.anomaly_score}`);
       btn.textContent = '✓ AUTHENTICATED';
-      setTimeout(() => {
-        window.location.href = 'index.html';
-      }, 1200);
+      setTimeout(() => { window.location.href = 'index.html'; }, 1200);
       return;
     }
 
   } catch (err) {
-    // Backend not running — simulate for demo
     simulateLogin(userId, btn);
     return;
   }
@@ -907,7 +845,6 @@ async function handleLogin(e) {
   btn.textContent = '▶ AUTHENTICATE';
 }
 
-// Demo mode when backend is offline
 function simulateLogin(userId, btn) {
   const knownUsers = ['USR_4421','USR_1190','USR_7734','USR_2234','USR_5512','USR_3391'];
   const isKnown    = knownUsers.includes(userId.toUpperCase());
@@ -933,7 +870,6 @@ function simulateLogin(userId, btn) {
   setTimeout(() => { window.location.href = 'index.html'; }, 1200);
 }
 
-// ── Device fingerprint ────────────────────────────────────────
 function getDeviceId() {
   let id = localStorage.getItem('nexus_device_id');
   if (!id) {
@@ -943,7 +879,6 @@ function getDeviceId() {
   return id;
 }
 
-// ── Threat level animation ────────────────────────────────────
 function updateThreatLevel() {
   const levels = [
     { pct:15, label:'LOW',      color:'var(--green)' },
@@ -951,7 +886,7 @@ function updateThreatLevel() {
     { pct:45, label:'MEDIUM',   color:'var(--amber)' },
     { pct:72, label:'HIGH',     color:'var(--red)'   },
   ];
-  const l = levels[Math.floor(Math.random() * 2)]; // Keep mostly low for login page
+  const l = levels[Math.floor(Math.random() * 2)];
   document.getElementById('threat-fill').style.width = l.pct + '%';
   document.getElementById('threat-fill').style.background = `linear-gradient(90deg, var(--green), ${l.color})`;
   document.getElementById('threat-val').textContent  = l.label;
