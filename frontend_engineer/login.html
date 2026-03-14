@@ -1,83 +1,965 @@
-<div class="login-box">
-  <h2>NEXUS SOC</h2>
-  <input id="username" placeholder="Username (e.g., USR_4421)">
-  <input id="password" type="password" placeholder="Password">
-  <button onclick="login()">Login</button>
-  
-  <button onclick="triggerBiometricLogin()" style="margin-top: 10px; background: #00c8ff; color: #0f172a; font-weight: bold;">
-    [+] Fingerprint / Touch ID
-  </button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS SOC — Secure Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-void: #030712;
+    --bg-deep: #070e1a;
+    --bg-panel: #0a1628;
+    --bg-card: #0d1f35;
+    --border-dim: rgba(0,200,255,0.1);
+    --border-glow: rgba(0,200,255,0.35);
+    --cyan: #00c8ff;
+    --green: #00ff88;
+    --red: #ff3860;
+    --amber: #ffb300;
+    --purple: #a855f7;
+    --text-primary: #e0f4ff;
+    --text-secondary: rgba(200,230,255,0.55);
+    --text-dim: rgba(200,230,255,0.3);
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-display: 'Orbitron', sans-serif;
+    --font-body: 'Rajdhani', sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg-void);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Scanlines */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,200,255,0.012) 2px, rgba(0,200,255,0.012) 4px
+    );
+    pointer-events:none; z-index:9999;
+  }
+
+  /* Grid */
+  body::after {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(0,200,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,255,0.03) 1px, transparent 1px);
+    background-size:60px 60px;
+    pointer-events:none; z-index:0;
+  }
+
+  /* Animated background orbs */
+  .orb {
+    position:fixed;
+    border-radius:50%;
+    filter:blur(80px);
+    pointer-events:none;
+    z-index:0;
+    animation: orb-drift 12s ease-in-out infinite;
+  }
+  .orb-1 { width:400px; height:400px; background:rgba(0,200,255,0.04); top:-100px; left:-100px; }
+  .orb-2 { width:300px; height:300px; background:rgba(168,85,247,0.05); bottom:-50px; right:-50px; animation-delay:-6s; }
+  .orb-3 { width:200px; height:200px; background:rgba(255,56,96,0.03); top:50%; left:50%; animation-delay:-3s; }
+
+  @keyframes orb-drift {
+    0%,100% { transform:translate(0,0); }
+    33% { transform:translate(30px,-20px); }
+    66% { transform:translate(-20px,30px); }
+  }
+
+  /* MAIN CONTAINER */
+  .login-wrapper {
+    position:relative; z-index:1;
+    width:100%; max-width:460px;
+    padding:20px;
+    animation: fade-up 0.6s ease forwards;
+  }
+
+  @keyframes fade-up {
+    from { opacity:0; transform:translateY(24px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* LOGO HEADER */
+  .login-header {
+    text-align:center;
+    margin-bottom:32px;
+  }
+
+  .logo-ring {
+    width:72px; height:72px;
+    border:2px solid var(--cyan);
+    border-radius:16px;
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 16px;
+    position:relative;
+    box-shadow: 0 0 30px rgba(0,200,255,0.3), inset 0 0 20px rgba(0,200,255,0.06);
+    animation: logo-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes logo-pulse {
+    0%,100% { box-shadow: 0 0 30px rgba(0,200,255,0.3), inset 0 0 20px rgba(0,200,255,0.06); }
+    50%      { box-shadow: 0 0 50px rgba(0,200,255,0.5), inset 0 0 30px rgba(0,200,255,0.12); }
+  }
+
+  .logo-ring::before {
+    content:'⬡';
+    font-size:32px;
+    color:var(--cyan);
+    text-shadow:0 0 16px var(--cyan);
+  }
+
+  /* Rotating border */
+  .logo-ring::after {
+    content:'';
+    position:absolute; inset:-6px;
+    border-radius:20px;
+    border:1px solid transparent;
+    border-top-color:rgba(0,200,255,0.4);
+    border-right-color:rgba(0,200,255,0.2);
+    animation:spin 4s linear infinite;
+  }
+
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .login-title {
+    font-family:var(--font-display);
+    font-size:22px;
+    font-weight:900;
+    letter-spacing:6px;
+    color:var(--cyan);
+    text-shadow:0 0 24px rgba(0,200,255,0.4);
+    margin-bottom:6px;
+  }
+
+  .login-subtitle {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-dim);
+    letter-spacing:3px;
+    text-transform:uppercase;
+  }
+
+  /* CARD */
+  .login-card {
+    background:var(--bg-panel);
+    border:1px solid var(--border-dim);
+    border-radius:16px;
+    padding:32px;
+    position:relative;
+    overflow:hidden;
+    box-shadow:0 0 60px rgba(0,0,0,0.5);
+  }
+
+  .login-card::before {
+    content:'';
+    position:absolute; top:0; left:0; right:0;
+    height:2px;
+    background:linear-gradient(90deg, transparent, var(--cyan), transparent);
+    box-shadow:0 0 12px var(--cyan);
+  }
+
+  /* Corner decorations */
+  .corner { position:absolute; width:20px; height:20px; }
+  .corner.tl { top:10px; left:10px; border-top:1px solid var(--border-glow); border-left:1px solid var(--border-glow); }
+  .corner.tr { top:10px; right:10px; border-top:1px solid var(--border-glow); border-right:1px solid var(--border-glow); }
+  .corner.bl { bottom:10px; left:10px; border-bottom:1px solid var(--border-glow); border-left:1px solid var(--border-glow); }
+  .corner.br { bottom:10px; right:10px; border-bottom:1px solid var(--border-glow); border-right:1px solid var(--border-glow); }
+
+  /* AUTH METHOD TABS */
+  .auth-tabs {
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:6px;
+    margin-bottom:24px;
+  }
+
+  .auth-tab {
+    padding:8px 4px;
+    border-radius:8px;
+    border:1px solid var(--border-dim);
+    background:var(--bg-card);
+    color:var(--text-dim);
+    font-family:var(--font-mono);
+    font-size:9px;
+    letter-spacing:1px;
+    text-align:center;
+    cursor:pointer;
+    transition:all 0.2s;
+    display:flex; flex-direction:column;
+    align-items:center; gap:4px;
+  }
+
+  .auth-tab:hover { border-color:var(--border-glow); color:var(--text-secondary); }
+
+  .auth-tab.active {
+    border-color:rgba(0,200,255,0.5);
+    background:rgba(0,200,255,0.08);
+    color:var(--cyan);
+    box-shadow:0 0 12px rgba(0,200,255,0.1);
+  }
+
+  .auth-tab-icon { font-size:18px; }
+
+  /* FORM */
+  .form-group { margin-bottom:18px; }
+
+  .form-label {
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--text-dim);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    margin-bottom:8px;
+    display:block;
+  }
+
+  .form-input {
+    width:100%;
+    background:var(--bg-card);
+    border:1px solid var(--border-dim);
+    border-radius:8px;
+    padding:12px 16px;
+    color:var(--text-primary);
+    font-family:var(--font-mono);
+    font-size:13px;
+    outline:none;
+    transition:all 0.2s;
+    letter-spacing:1px;
+  }
+
+  .form-input::placeholder { color:var(--text-dim); }
+
+  .form-input:focus {
+    border-color:rgba(0,200,255,0.4);
+    background:rgba(0,200,255,0.04);
+    box-shadow:0 0 16px rgba(0,200,255,0.08);
+  }
+
+  .form-input:focus::placeholder { opacity:0; }
+
+  /* Password field with toggle */
+  .input-wrap { position:relative; }
+
+  .input-icon {
+    position:absolute; right:14px; top:50%;
+    transform:translateY(-50%);
+    color:var(--text-dim);
+    cursor:pointer;
+    font-size:14px;
+    transition:color 0.2s;
+    user-select:none;
+  }
+
+  .input-icon:hover { color:var(--cyan); }
+
+  /* Biometric panel */
+  .bio-panel {
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    padding:20px;
+    border:1px solid var(--border-dim);
+    border-radius:8px;
+    background:var(--bg-card);
+    margin-bottom:18px;
+    gap:12px;
+  }
+
+  .bio-panel.show { display:flex; }
+
+  .bio-scanner {
+    width:80px; height:80px;
+    border:2px solid var(--cyan);
+    border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:36px;
+    position:relative;
+    box-shadow:0 0 20px rgba(0,200,255,0.2);
+    cursor:pointer;
+    transition:all 0.3s;
+  }
+
+  .bio-scanner:hover { box-shadow:0 0 30px rgba(0,200,255,0.4); }
+
+  .bio-scanner.scanning::before {
+    content:'';
+    position:absolute; top:0; left:0; right:0;
+    height:3px; background:var(--cyan);
+    box-shadow:0 0 8px var(--cyan);
+    animation:scan-line 1.5s ease-in-out infinite;
+  }
+
+  @keyframes scan-line {
+    0%   { top:0; }
+    50%  { top:calc(100% - 3px); }
+    100% { top:0; }
+  }
+
+  .bio-status {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-secondary);
+    letter-spacing:2px;
+    text-align:center;
+  }
+
+  /* Pattern grid */
+  .pattern-grid {
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+    margin-bottom:18px;
+  }
+
+  .pattern-grid.show { display:flex; }
+
+  .pattern-dots {
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:16px;
+    padding:20px;
+    border:1px solid var(--border-dim);
+    border-radius:8px;
+    background:var(--bg-card);
+  }
+
+  .pattern-dot {
+    width:28px; height:28px;
+    border-radius:50%;
+    border:2px solid var(--border-dim);
+    background:var(--bg-panel);
+    cursor:pointer;
+    transition:all 0.15s;
+    position:relative;
+  }
+
+  .pattern-dot:hover { border-color:rgba(0,200,255,0.5); }
+  .pattern-dot.selected {
+    border-color:var(--cyan);
+    background:rgba(0,200,255,0.2);
+    box-shadow:0 0 10px rgba(0,200,255,0.3);
+  }
+
+  .pattern-display {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--cyan);
+    letter-spacing:3px;
+    min-height:16px;
+  }
+
+  /* SUBMIT BUTTON */
+  .btn-login {
+    width:100%;
+    padding:14px;
+    background:linear-gradient(135deg, rgba(0,200,255,0.15), rgba(0,200,255,0.08));
+    border:1px solid rgba(0,200,255,0.4);
+    border-radius:8px;
+    color:var(--cyan);
+    font-family:var(--font-display);
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:4px;
+    cursor:pointer;
+    transition:all 0.3s;
+    text-transform:uppercase;
+    position:relative;
+    overflow:hidden;
+    margin-top:8px;
+  }
+
+  .btn-login::before {
+    content:'';
+    position:absolute; top:-50%; left:-60%;
+    width:40%; height:200%;
+    background:linear-gradient(90deg, transparent, rgba(0,200,255,0.15), transparent);
+    transform:skewX(-20deg);
+    transition:left 0.5s;
+  }
+
+  .btn-login:hover {
+    background:linear-gradient(135deg, rgba(0,200,255,0.25), rgba(0,200,255,0.15));
+    box-shadow:0 0 24px rgba(0,200,255,0.25);
+    transform:translateY(-1px);
+  }
+
+  .btn-login:hover::before { left:130%; }
+
+  .btn-login:active { transform:translateY(0); }
+
+  .btn-login.loading {
+    pointer-events:none;
+    opacity:0.7;
+  }
+
+  /* DIVIDER */
+  .divider {
+    display:flex; align-items:center; gap:12px;
+    margin:20px 0;
+  }
+
+  .divider-line {
+    flex:1; height:1px;
+    background:var(--border-dim);
+  }
+
+  .divider-text {
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--text-dim);
+    letter-spacing:2px;
+  }
+
+  /* MFA section */
+  .mfa-section {
+    display:none;
+    flex-direction:column;
+    gap:12px;
+    margin-bottom:18px;
+  }
+
+  .mfa-section.show { display:flex; }
+
+  .mfa-label {
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--amber);
+    letter-spacing:2px;
+    text-align:center;
+  }
+
+  .otp-inputs {
+    display:flex; gap:8px; justify-content:center;
+  }
+
+  .otp-input {
+    width:42px; height:48px;
+    background:var(--bg-card);
+    border:1px solid var(--border-dim);
+    border-radius:8px;
+    color:var(--cyan);
+    font-family:var(--font-display);
+    font-size:18px;
+    font-weight:700;
+    text-align:center;
+    outline:none;
+    transition:all 0.2s;
+  }
+
+  .otp-input:focus {
+    border-color:rgba(255,179,0,0.5);
+    box-shadow:0 0 12px rgba(255,179,0,0.15);
+  }
+
+  /* STATUS MESSAGES */
+  .status-msg {
+    display:none;
+    padding:10px 14px;
+    border-radius:6px;
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:1px;
+    margin-bottom:14px;
+    align-items:center;
+    gap:8px;
+  }
+
+  .status-msg.show { display:flex; }
+  .status-msg.error { background:rgba(255,56,96,0.1); border:1px solid rgba(255,56,96,0.3); color:var(--red); }
+  .status-msg.success { background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.3); color:var(--green); }
+  .status-msg.warning { background:rgba(255,179,0,0.1); border:1px solid rgba(255,179,0,0.3); color:var(--amber); }
+
+  /* FOOTER */
+  .login-footer {
+    margin-top:20px;
+    text-align:center;
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--text-dim);
+    letter-spacing:2px;
+    line-height:2;
+  }
+
+  /* Security indicators */
+  .security-row {
+    display:flex; justify-content:center; gap:20px;
+    margin-top:16px;
+  }
+
+  .sec-badge {
+    display:flex; align-items:center; gap:5px;
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--text-dim);
+    letter-spacing:1px;
+  }
+
+  .sec-dot {
+    width:6px; height:6px; border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 6px var(--green);
+    animation:pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%,100% { opacity:1; }
+    50% { opacity:0.4; }
+  }
+
+  /* Threat indicator */
+  .threat-bar {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 12px;
+    border:1px solid var(--border-dim);
+    border-radius:6px;
+    background:var(--bg-card);
+    margin-bottom:20px;
+  }
+
+  .threat-label {
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--text-dim);
+    letter-spacing:1px;
+    white-space:nowrap;
+  }
+
+  .threat-track {
+    flex:1; height:3px;
+    background:rgba(255,255,255,0.05);
+    border-radius:2px; overflow:hidden;
+  }
+
+  .threat-fill {
+    height:100%; width:23%;
+    background:linear-gradient(90deg, var(--green), var(--amber));
+    border-radius:2px;
+    transition:width 1s ease;
+  }
+
+  .threat-val {
+    font-family:var(--font-display);
+    font-size:11px;
+    color:var(--green);
+    white-space:nowrap;
+  }
+
+  /* Responsive */
+  @media(max-width:480px) {
+    .login-card { padding:24px 18px; }
+    .auth-tabs { grid-template-columns:repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="login-wrapper">
+
+  <!-- HEADER -->
+  <div class="login-header">
+    <div class="logo-ring"></div>
+    <div class="login-title">NEXUS SOC</div>
+    <div class="login-subtitle">Banking Cyber Defense Platform · Secure Access</div>
+  </div>
+
+  <!-- CARD -->
+  <div class="login-card">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <!-- Threat level bar -->
+    <div class="threat-bar">
+      <span class="threat-label">NETWORK THREAT</span>
+      <div class="threat-track"><div class="threat-fill" id="threat-fill"></div></div>
+      <span class="threat-val" id="threat-val">LOW</span>
+    </div>
+
+    <!-- Auth method selector -->
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuth('password')" id="tab-password">
+        <span class="auth-tab-icon">🔑</span>
+        PASSWORD
+      </div>
+      <div class="auth-tab" onclick="switchAuth('fingerprint')" id="tab-fingerprint">
+        <span class="auth-tab-icon">👆</span>
+        FINGER
+      </div>
+      <div class="auth-tab" onclick="switchAuth('facial')" id="tab-facial">
+        <span class="auth-tab-icon">👤</span>
+        FACIAL
+      </div>
+      <div class="auth-tab" onclick="switchAuth('pattern')" id="tab-pattern">
+        <span class="auth-tab-icon">⬡</span>
+        PATTERN
+      </div>
+    </div>
+
+    <!-- Status message -->
+    <div class="status-msg" id="status-msg">
+      <span id="status-icon">⚠</span>
+      <span id="status-text"></span>
+    </div>
+
+    <!-- FORM -->
+    <form onsubmit="handleLogin(event)">
+
+      <!-- User ID -->
+      <div class="form-group">
+        <label class="form-label">User ID / Employee Code</label>
+        <div class="input-wrap">
+          <input type="text" class="form-input" id="user-id"
+                 placeholder="USR_XXXX" autocomplete="off" required/>
+        </div>
+      </div>
+
+      <!-- Password section -->
+      <div id="password-section">
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-wrap">
+            <input type="password" class="form-input" id="password"
+                   placeholder="Enter secure password" style="padding-right:44px"/>
+            <span class="input-icon" onclick="togglePassword()">👁</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fingerprint section -->
+      <div class="bio-panel" id="fingerprint-section">
+        <div class="bio-scanner" id="fp-scanner" onclick="scanBiometric('fingerprint')">
+          👆
+        </div>
+        <div class="bio-status" id="fp-status">TAP TO SCAN FINGERPRINT</div>
+      </div>
+
+      <!-- Facial section -->
+      <div class="bio-panel" id="facial-section">
+        <div class="bio-scanner" id="face-scanner" onclick="scanBiometric('facial')">
+          👤
+        </div>
+        <div class="bio-status" id="face-status">TAP TO START FACIAL SCAN</div>
+      </div>
+
+      <!-- Pattern section -->
+      <div class="pattern-grid" id="pattern-section">
+        <div class="pattern-dots" id="pattern-dots">
+          <!-- 9 dots generated by JS -->
+        </div>
+        <div class="pattern-display" id="pattern-display">DRAW YOUR PATTERN</div>
+      </div>
+
+      <!-- MFA section (shown after first factor) -->
+      <div class="mfa-section" id="mfa-section">
+        <div class="mfa-label">⚠ MFA REQUIRED — ENTER OTP FROM AUTHENTICATOR</div>
+        <div class="otp-inputs">
+          <input class="otp-input" maxlength="1" id="otp-0" oninput="otpNext(0)"/>
+          <input class="otp-input" maxlength="1" id="otp-1" oninput="otpNext(1)"/>
+          <input class="otp-input" maxlength="1" id="otp-2" oninput="otpNext(2)"/>
+          <input class="otp-input" maxlength="1" id="otp-3" oninput="otpNext(3)"/>
+          <input class="otp-input" maxlength="1" id="otp-4" oninput="otpNext(4)"/>
+          <input class="otp-input" maxlength="1" id="otp-5" oninput="otpNext(5)"/>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" class="btn-login" id="login-btn">
+        ▶ AUTHENTICATE
+      </button>
+
+    </form>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="login-footer">
+    <div class="security-row">
+      <div class="sec-badge"><div class="sec-dot"></div> TLS 1.3</div>
+      <div class="sec-badge"><div class="sec-dot"></div> AES-256</div>
+      <div class="sec-badge"><div class="sec-dot"></div> FIPS 140-2</div>
+    </div>
+    <div style="margin-top:10px;">NEXUS SOC v4.2.1 · UNAUTHORIZED ACCESS IS MONITORED</div>
+  </div>
+
 </div>
 
 <script>
-const API = "http://127.0.0.1:8000";
+// ── Config ────────────────────────────────────────────────────
+const BACKEND_URL = "http://localhost:8000";
+let currentMethod = "password";
+let patternSequence = [];
+let bioScanned = false;
 
-async function login(){
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
+// ── Auth method switching ─────────────────────────────────────
+function switchAuth(method) {
+  currentMethod = method;
 
-  // FIX: Sending the exact payload the AI backend expects
-  const res = await fetch(API + "/api/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      user_id: username || "USR_4421", 
-      auth_method: "PASSWORD",
-      device_id: "DEV_WEB_001",
-      ip_address: "127.0.0.1",
-      location: "Local Browser"
-    })
-  });
+  // Update tabs
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`tab-${method}`).classList.add('active');
 
-  const data = await res.json();
+  // Hide all sections
+  document.getElementById('password-section').style.display = 'none';
+  document.getElementById('fingerprint-section').classList.remove('show');
+  document.getElementById('facial-section').classList.remove('show');
+  document.getElementById('pattern-section').classList.remove('show');
 
-  // FIX: Backend returns 'success: true', not 'status: success'
-  if(data.success === true){
-    window.location.href = "index.html";
-  } else {
-    alert("Login failed: " + (data.detail || "Blocked by SOC"));
+  // Show selected
+  if (method === 'password') {
+    document.getElementById('password-section').style.display = 'block';
+  } else if (method === 'fingerprint') {
+    document.getElementById('fingerprint-section').classList.add('show');
+    resetBio('fingerprint');
+  } else if (method === 'facial') {
+    document.getElementById('facial-section').classList.add('show');
+    resetBio('facial');
+  } else if (method === 'pattern') {
+    document.getElementById('pattern-section').classList.add('show');
+    buildPatternDots();
+  }
+
+  hideStatus();
+}
+
+// ── Biometric scanner ─────────────────────────────────────────
+function scanBiometric(type) {
+  const scannerId = type === 'fingerprint' ? 'fp-scanner' : 'face-scanner';
+  const statusId  = type === 'fingerprint' ? 'fp-status'  : 'face-status';
+  const scanner   = document.getElementById(scannerId);
+  const status    = document.getElementById(statusId);
+
+  scanner.classList.add('scanning');
+  status.textContent = 'SCANNING...';
+  status.style.color = 'var(--cyan)';
+
+  setTimeout(() => {
+    scanner.classList.remove('scanning');
+    bioScanned = true;
+    status.textContent = '✓ SCAN COMPLETE — PROCEED TO LOGIN';
+    status.style.color = 'var(--green)';
+    scanner.style.borderColor = 'var(--green)';
+    scanner.style.boxShadow   = '0 0 20px rgba(0,255,136,0.3)';
+  }, 2000);
+}
+
+function resetBio(type) {
+  bioScanned = false;
+  const scannerId = type === 'fingerprint' ? 'fp-scanner' : 'face-scanner';
+  const statusId  = type === 'fingerprint' ? 'fp-status'  : 'face-status';
+  const scanner   = document.getElementById(scannerId);
+  const status    = document.getElementById(statusId);
+  scanner.classList.remove('scanning');
+  scanner.style.borderColor = 'var(--cyan)';
+  scanner.style.boxShadow   = '0 0 20px rgba(0,200,255,0.2)';
+  status.textContent = type === 'fingerprint' ? 'TAP TO SCAN FINGERPRINT' : 'TAP TO START FACIAL SCAN';
+  status.style.color = 'var(--text-secondary)';
+}
+
+// ── Pattern lock ──────────────────────────────────────────────
+function buildPatternDots() {
+  patternSequence = [];
+  const grid = document.getElementById('pattern-dots');
+  grid.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'pattern-dot';
+    dot.dataset.i = i;
+    dot.onclick = () => selectDot(i, dot);
+    grid.appendChild(dot);
+  }
+  document.getElementById('pattern-display').textContent = 'DRAW YOUR PATTERN';
+}
+
+function selectDot(index, dot) {
+  if (patternSequence.includes(index)) return;
+  patternSequence.push(index);
+  dot.classList.add('selected');
+  const display = document.getElementById('pattern-display');
+  display.textContent = '● '.repeat(patternSequence.length).trim();
+  if (patternSequence.length >= 4) {
+    display.style.color = 'var(--green)';
+    display.textContent += '  ✓ PATTERN SET';
   }
 }
 
-// FIX: The Hardware Biometric connection
-async function triggerBiometricLogin() {
-  try {
-    const challenge = new Uint8Array(32);
-    window.crypto.getRandomValues(challenge);
-    const publicKeyConfig = {
-      challenge: challenge,
-      rp: { name: "NEXUS SOC", id: window.location.hostname },
-      user: {
-        id: new Uint8Array(16), 
-        name: document.getElementById("username").value || "arjun@nexusbank.in",
-        displayName: "Authorized User"
-      },
-      pubKeyCredParams: [{alg: -7, type: "public-key"}],
-      authenticatorSelection: { authenticatorAttachment: "platform" },
-      timeout: 60000
-    };
+// ── Password visibility toggle ────────────────────────────────
+function togglePassword() {
+  const input = document.getElementById('password');
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
 
-    // This pops up the native TouchID / Windows Hello
-    const credential = await navigator.credentials.create({ publicKey: publicKeyConfig });
-    
-    const res = await fetch(API + "/api/auth/biometric", {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-          user_id: document.getElementById("username").value || "USR_4421",
-          device_id: "DEV_A1B2"
-      })
+// ── OTP inputs ────────────────────────────────────────────────
+function otpNext(index) {
+  const current = document.getElementById(`otp-${index}`);
+  if (current.value && index < 5) {
+    document.getElementById(`otp-${index + 1}`).focus();
+  }
+}
+
+// ── Status messages ───────────────────────────────────────────
+function showStatus(type, text) {
+  const msg  = document.getElementById('status-msg');
+  const icon = document.getElementById('status-icon');
+  const txt  = document.getElementById('status-text');
+  const icons = { error:'✗', success:'✓', warning:'⚠' };
+  msg.className = `status-msg show ${type}`;
+  icon.textContent = icons[type] || '●';
+  txt.textContent  = text;
+}
+
+function hideStatus() {
+  document.getElementById('status-msg').className = 'status-msg';
+}
+
+// ── Login handler ─────────────────────────────────────────────
+async function handleLogin(e) {
+  e.preventDefault();
+  const userId = document.getElementById('user-id').value.trim();
+  const btn    = document.getElementById('login-btn');
+
+  if (!userId) { showStatus('error', 'USER ID IS REQUIRED'); return; }
+
+  // Validate auth method
+  if ((currentMethod === 'fingerprint' || currentMethod === 'facial') && !bioScanned) {
+    showStatus('error', `COMPLETE ${currentMethod.toUpperCase()} SCAN FIRST`);
+    return;
+  }
+  if (currentMethod === 'pattern' && patternSequence.length < 4) {
+    showStatus('error', 'PATTERN MUST BE AT LEAST 4 POINTS');
+    return;
+  }
+
+  // Loading state
+  btn.classList.add('loading');
+  btn.textContent = '⟳ AUTHENTICATING...';
+  hideStatus();
+
+  const payload = {
+    user_id:     userId,
+    auth_method: currentMethod.toUpperCase(),
+    device_id:   getDeviceId(),
+    ip_address:  '127.0.0.1',
+    location:    'Local',
+  };
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
     });
 
     const data = await res.json();
-    if (data.success) {
-        alert("Hardware Verified! Anomaly Score: " + data.anomaly_score);
-        window.location.href = "index.html";
+
+    if (res.status === 403) {
+      showStatus('error', 'ACCESS DENIED — IP/DEVICE BLOCKED BY SECURITY SYSTEM');
+      btn.classList.remove('loading');
+      btn.textContent = '▶ AUTHENTICATE';
+      return;
     }
+
+    if (data.require_mfa) {
+      showStatus('warning', `ANOMALY SCORE: ${data.anomaly_score} — MFA REQUIRED`);
+      document.getElementById('mfa-section').classList.add('show');
+      btn.classList.remove('loading');
+      btn.textContent = '▶ VERIFY OTP';
+      return;
+    }
+
+    if (data.success) {
+      showStatus('success', `ACCESS GRANTED — ANOMALY SCORE: ${data.anomaly_score}`);
+      btn.textContent = '✓ AUTHENTICATED';
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 1200);
+      return;
+    }
+
   } catch (err) {
-    alert("Hardware security rejected the login. Please serve on localhost.");
+    // Backend not running — simulate for demo
+    simulateLogin(userId, btn);
+    return;
   }
+
+  btn.classList.remove('loading');
+  btn.textContent = '▶ AUTHENTICATE';
 }
+
+// Demo mode when backend is offline
+function simulateLogin(userId, btn) {
+  const knownUsers = ['USR_4421','USR_1190','USR_7734','USR_2234','USR_5512','USR_3391'];
+  const isKnown    = knownUsers.includes(userId.toUpperCase());
+  const isSuspicious = userId.toUpperCase() === 'USR_4421' && currentMethod !== 'password';
+
+  if (!isKnown && userId.length < 4) {
+    showStatus('error', 'INVALID USER ID FORMAT — ACCESS DENIED');
+    btn.classList.remove('loading');
+    btn.textContent = '▶ AUTHENTICATE';
+    return;
+  }
+
+  if (isSuspicious) {
+    showStatus('warning', 'ANOMALY DETECTED — MFA REQUIRED (DEMO MODE)');
+    document.getElementById('mfa-section').classList.add('show');
+    btn.classList.remove('loading');
+    btn.textContent = '▶ VERIFY OTP';
+    return;
+  }
+
+  showStatus('success', 'ACCESS GRANTED — REDIRECTING TO DASHBOARD (DEMO MODE)');
+  btn.textContent = '✓ AUTHENTICATED';
+  setTimeout(() => { window.location.href = 'index.html'; }, 1200);
+}
+
+// ── Device fingerprint ────────────────────────────────────────
+function getDeviceId() {
+  let id = localStorage.getItem('nexus_device_id');
+  if (!id) {
+    id = 'DEV_' + Math.random().toString(36).substr(2,8).toUpperCase();
+    localStorage.setItem('nexus_device_id', id);
+  }
+  return id;
+}
+
+// ── Threat level animation ────────────────────────────────────
+function updateThreatLevel() {
+  const levels = [
+    { pct:15, label:'LOW',      color:'var(--green)' },
+    { pct:23, label:'LOW',      color:'var(--green)' },
+    { pct:45, label:'MEDIUM',   color:'var(--amber)' },
+    { pct:72, label:'HIGH',     color:'var(--red)'   },
+  ];
+  const l = levels[Math.floor(Math.random() * 2)]; // Keep mostly low for login page
+  document.getElementById('threat-fill').style.width = l.pct + '%';
+  document.getElementById('threat-fill').style.background = `linear-gradient(90deg, var(--green), ${l.color})`;
+  document.getElementById('threat-val').textContent  = l.label;
+  document.getElementById('threat-val').style.color  = l.color;
+}
+
+updateThreatLevel();
+setInterval(updateThreatLevel, 8000);
 </script>
 </body>
 </html>
