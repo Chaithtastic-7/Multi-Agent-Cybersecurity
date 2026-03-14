@@ -1,0 +1,15 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables (CRITICAL for Cybersecurity projects)
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Local configuration
+.vscode/
+.DS_Store
