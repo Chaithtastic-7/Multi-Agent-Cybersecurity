@@ -136,7 +136,6 @@
 <div class="orb orb-3"></div>
 
 <div class="login-wrapper">
-
   <div class="login-header">
     <div class="logo-ring"></div>
     <div class="login-title">NEXUS SOC</div>
@@ -169,7 +168,7 @@
         <label class="form-label">Password</label>
         <div class="input-wrap">
           <input type="password" class="form-input" id="password" placeholder="Enter secure password"/>
-          <span class="input-icon" onclick="togglePassword()">👁</span>
+          <span class="input-icon" id="toggle-eye" onclick="togglePassword()">👁</span>
         </div>
       </div>
       <button class="btn-login" id="btn-step-1" onclick="processStep1()">▶ VERIFY CREDENTIALS</button>
@@ -192,7 +191,6 @@
       </div>
       <button class="btn-login" id="btn-step-3" onclick="processStep3()">▶ COMPLETE LOGIN</button>
     </div>
-
   </div>
 
   <div class="login-footer">
@@ -254,7 +252,6 @@ async function processStep1() {
   hideStatus();
 
   try {
-    // 🛑 REAL-TIME DATABASE CHECK
     const res = await fetch(`${BACKEND_URL}/api/auth/validate-id`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -267,10 +264,9 @@ async function processStep1() {
       showStatus('error', data.error);
       btn.classList.remove('loading');
       btn.textContent = '▶ VERIFY CREDENTIALS';
-      return; // 🛑 Stops the user right here!
+      return; 
     }
 
-    // If valid, proceed to Step 2
     showStatus('success', 'IDENTITY VERIFIED — PROCEED TO BIOMETRIC SCAN');
     setTimeout(() => {
       btn.classList.remove('loading');
@@ -286,8 +282,10 @@ async function processStep1() {
   } catch (err) {
     showStatus('error', 'SECURITY SERVER OFFLINE');
     btn.classList.remove('loading');
+    btn.textContent = '▶ VERIFY CREDENTIALS';
   }
 }
+
 // ── STEP 2: HARDWARE FINGERPRINT ────────────────────────────
 async function triggerHardwareFingerprint() {
   const scanner = document.getElementById('fp-scanner');
