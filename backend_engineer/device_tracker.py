@@ -5,7 +5,8 @@ Flags unknown or suspicious devices.
 """
 
 import uuid
-from datetime import datetime, timedelta
+# FIX: Added timezone to imports
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 from collections import defaultdict
 
@@ -35,12 +36,14 @@ class DeviceTracker:
         self._seed_demo_devices()
 
     def _seed_demo_devices(self):
+        # FIX: Replaced utcnow() with now(timezone.utc)
+        now_utc = datetime.now(timezone.utc)
         demo = [
-            {"user_id":"USR_4421","device_id":"DEV_A1B2","mac":"78:4F:43:55:6A:BC","ip":"192.168.1.100","device_type":"Mobile","trusted":True,"last_seen":datetime.utcnow(),"location":"Mumbai"},
-            {"user_id":"USR_4421","device_id":"DEV_C3D4","mac":"B8:27:EB:12:34:56","ip":"192.168.1.101","device_type":"Desktop","trusted":True,"last_seen":datetime.utcnow(),"location":"Mumbai"},
-            {"user_id":"USR_1190","device_id":"DEV_E5F6","mac":"D4:61:9D:AB:CD:EF","ip":"10.0.0.88","device_type":"Mobile","trusted":True,"last_seen":datetime.utcnow(),"location":"Delhi"},
-            {"user_id":"USR_7734","device_id":"DEV_G7H8","mac":"AC:DE:48:00:11:22","ip":"172.16.1.4","device_type":"Desktop","trusted":True,"last_seen":datetime.utcnow(),"location":"Bangalore"},
-            {"user_id":"USR_2234","device_id":"DEV_I9J0","mac":"F8:3A:77:C2:11:DE","ip":"172.16.8.44","device_type":"Mobile","trusted":True,"last_seen":datetime.utcnow(),"location":"Pune"},
+            {"user_id":"USR_4421","device_id":"DEV_A1B2","mac":"78:4F:43:55:6A:BC","ip":"192.168.1.100","device_type":"Mobile","trusted":True,"last_seen":now_utc,"location":"Mumbai"},
+            {"user_id":"USR_4421","device_id":"DEV_C3D4","mac":"B8:27:EB:12:34:56","ip":"192.168.1.101","device_type":"Desktop","trusted":True,"last_seen":now_utc,"location":"Mumbai"},
+            {"user_id":"USR_1190","device_id":"DEV_E5F6","mac":"D4:61:9D:AB:CD:EF","ip":"10.0.0.88","device_type":"Mobile","trusted":True,"last_seen":now_utc,"location":"Delhi"},
+            {"user_id":"USR_7734","device_id":"DEV_G7H8","mac":"AC:DE:48:00:11:22","ip":"172.16.1.4","device_type":"Desktop","trusted":True,"last_seen":now_utc,"location":"Bangalore"},
+            {"user_id":"USR_2234","device_id":"DEV_I9J0","mac":"F8:3A:77:C2:11:DE","ip":"172.16.8.44","device_type":"Mobile","trusted":True,"last_seen":now_utc,"location":"Pune"},
         ]
         for d in demo:
             self._user_devices[d["user_id"]].append(d)
@@ -101,6 +104,8 @@ class DeviceTracker:
                         mac: str, ip: str, device_type: str,
                         location: str) -> dict:
         """Register a new trusted device for a user."""
+        # FIX: Replaced utcnow() with now(timezone.utc)
+        now_utc = datetime.now(timezone.utc)
         device = {
             "device_id": device_id,
             "user_id": user_id,
@@ -108,9 +113,9 @@ class DeviceTracker:
             "ip": ip,
             "device_type": device_type,
             "trusted": True,
-            "last_seen": datetime.utcnow(),
+            "last_seen": now_utc,
             "location": location,
-            "registered_at": datetime.utcnow().isoformat(),
+            "registered_at": now_utc.isoformat(),
         }
         self._user_devices[user_id].append(device)
         self._device_registry[device_id] = device
@@ -119,18 +124,25 @@ class DeviceTracker:
     def _record_login(self, user_id: str, device_id: str,
                       mac: str, ip: str):
         """Record a login timestamp for frequency tracking."""
-        self._ip_login_log[ip].append(datetime.utcnow())
+        # FIX: Replaced utcnow() with now(timezone.utc)
+        self._ip_login_log[ip].append(datetime.now(timezone.utc))
+        
         # Clean old entries
-        cutoff = datetime.utcnow() - timedelta(minutes=self.LOGIN_FREQ_WINDOW_MINUTES)
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=self.LOGIN_FREQ_WINDOW_MINUTES)
         self._ip_login_log[ip] = [t for t in self._ip_login_log[ip] if t > cutoff]
+        
+        # FIX: Prevent memory leak by globally pruning if we track too many IPs
+        if len(self._ip_login_log) > 5000:
+            self._prune_stale_ips()
         
         # Update last seen
         if device_id in self._device_registry:
-            self._device_registry[device_id]["last_seen"] = datetime.utcnow()
+            self._device_registry[device_id]["last_seen"] = datetime.now(timezone.utc)
 
     def _get_login_frequency(self, ip: str) -> int:
         """Get login count from an IP in the last frequency window."""
-        cutoff = datetime.utcnow() - timedelta(minutes=self.LOGIN_FREQ_WINDOW_MINUTES)
+        # FIX: Replaced utcnow() with now(timezone.utc)
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=self.LOGIN_FREQ_WINDOW_MINUTES)
         logins = self._ip_login_log.get(ip, [])
         return sum(1 for t in logins if t > cutoff)
 
@@ -143,6 +155,22 @@ class DeviceTracker:
             "185.100.",  # Tor relays
         ]
         return any(ip.startswith(p) for p in suspicious_prefixes)
+
+    # FIX: Added pruning method
+    def _prune_stale_ips(self):
+        """Global cleanup to prevent memory leaks from one-time IPs."""
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=self.LOGIN_FREQ_WINDOW_MINUTES)
+        
+        stale_ips = []
+        for ip, logins in self._ip_login_log.items():
+            recent_logins = [t for t in logins if t > cutoff]
+            if not recent_logins:
+                stale_ips.append(ip)
+            else:
+                self._ip_login_log[ip] = recent_logins
+                
+        for ip in stale_ips:
+            del self._ip_login_log[ip]
 
     def get_all_devices(self) -> List[dict]:
         """Get all tracked devices (sanitized)."""
