@@ -38,6 +38,7 @@ from datetime import datetime, timezone
 from typing import List
 import uvicorn
 
+
 from backend_engineer.auth_security import AuthSecurityModule
 from backend_engineer.auth_security import AuthSecurityModule
 from backend_engineer.device_tracker import DeviceTracker
@@ -50,12 +51,23 @@ from DL_engineer.network_agent      import NetworkMonitoringAgent
 from DL_engineer.auth_agent         import AuthenticationAgent
 from DL_engineer.fraud_agent        import FraudDetectionAgent
 from DL_engineer.threat_agent       import ThreatResponseAgent
+from fastapi.middleware.cors import CORSMiddleware
+
+# ... (where you define app = FastAPI())
+
 
 # ── App ───────────────────────────────────────────────────────
 app = FastAPI(
     title="NEXUS SOC — Banking Cyber Defense",
     description="Multi-Agent Cybersecurity Defense System",
     version="4.2.1"
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allows all headers
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
