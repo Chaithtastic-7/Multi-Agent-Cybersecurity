@@ -128,7 +128,6 @@ let ws;
 
 function initWebSocket() {
   // 1. Convert the HTTP backend URL to a WS URL and append the security token
-  // This must match the token we set in main_sqlite.py!
   const wsUrl = BACKEND_URL.replace("http", "ws") + "/ws/live-feed?token=super_secret_admin_token";
   
   ws = new WebSocket(wsUrl);
@@ -137,17 +136,45 @@ function initWebSocket() {
     console.log("✅ WebSocket Connected to NEXUS SOC Live Feed");
   };
 
+  // UPDATED: Now dynamically injects the WebSocket alerts directly into your HTML!
   ws.onmessage = (event) => {
     const alertData = JSON.parse(event.data);
     console.log("🚨 Real-time Event Received:", alertData);
     
-    // Future integration: You can use alertData to update your UI immediately 
-    // instead of waiting for the 3-second loadDashboard() polling cycle!
+    // Inject the real-time alert into the DOM feed
+    const feedList = document.getElementById('feed-list');
+    if(feedList) {
+      const item = document.createElement('div');
+      
+      let typeClass = alertData.severity === 'CRITICAL' ? 'block' : (alertData.severity === 'HIGH' ? 'alert' : 'warn');
+      let typeText = alertData.type || 'ALERT';
+      let msg = '';
+
+      if(alertData.type === 'ANOMALY') {
+        msg = `Pattern Anomaly: USR_${alertData.user_id.slice(-4)} | Score: ${alertData.anomaly_score.toFixed(1)} | IP Logged`;
+      } else if(alertData.type === 'FRAUD_ALERT') {
+        msg = `Suspicious Transaction Blocked! Reason: ${alertData.reasons[0]}`;
+      } else if(alertData.type === 'BLOCKED') {
+        msg = `IP/MAC BLOCKED: ${alertData.ip || alertData.mac} - ${alertData.reason}`;
+      }
+
+      item.className = `feed-item ${typeClass}`;
+      item.innerHTML = `
+        <span class="feed-type">${typeText}</span>
+        <span class="feed-msg">${msg}</span>
+        <span class="feed-time">${new Date().toTimeString().slice(0,5)}</span>
+      `;
+      feedList.prepend(item); 
+    }
+
+    // Instantly update the Threat Gauge if an anomaly or fraud score is received
+    if(alertData.anomaly_score || alertData.fraud_score) {
+       updateThreatGauge(Math.floor(alertData.anomaly_score || alertData.fraud_score * 100));
+    }
   };
 
   ws.onclose = (event) => {
     console.warn(`⚠️ WebSocket Disconnected (Code: ${event.code}). Reconnecting in 5s...`);
-    // If the server goes down, automatically try to reconnect
     setTimeout(initWebSocket, 5000);
   };
 
@@ -162,10 +189,61 @@ document.addEventListener("DOMContentLoaded", () => {
   updateClock();
   loadDashboard();
   
-  // Initialize the secure WebSocket connection
   initWebSocket(); 
   
-  // Set intervals
   setInterval(updateClock, 1000);
-  setInterval(loadDashboard, 3000); // Faster updates for SOC feel
+  setInterval(loadDashboard, 3000); 
 });
+
+// ---------------- LIVE RED TEAM SIMULATION (FOR THE JUDGE) ----------------
+async function triggerAttack() {
+  const statusEl = document.getElementById('sim-status');
+  if(statusEl) {
+      statusEl.innerText = "🔴 RED TEAM ATTACK IN PROGRESS...";
+      statusEl.style.color = "#ff3860";
+  }
+
+  // 1. BRUTE FORCE DETECTION
+  console.log("Initiating Brute Force...");
+  for(let i=0; i<4; i++) {
+    await fetch(`${BACKEND_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        user_id: "USR_4421", auth_method: "PASSWORD", device_id: "UNKNOWN_DEV", 
+        ip_address: "185.220.101.44", mac_address: "AA:BB:CC:DD:EE:FF", location: "Moscow"
+      })
+    });
+  }
+
+  // 2. MALICIOUS INTENT & IP/MAC LOGGING (PATTERN CHANGE)
+  setTimeout(async () => {
+    console.log("Initiating Pattern Anomaly...");
+    await fetch(`${BACKEND_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+         user_id: "USR_4421", auth_method: "PATTERN", device_id: "UNKNOWN_DEV", 
+         ip_address: "185.220.101.44", mac_address: "AA:BB:CC:DD:EE:FF", location: "Moscow"
+      })
+    });
+  }, 1500);
+
+  // 3. SUSPICIOUS TRANSACTION POST-COMPROMISE
+  setTimeout(async () => {
+    console.log("Initiating Fraud Transaction...");
+    await fetch(`${BACKEND_URL}/api/transaction/analyze`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+         user_id: "USR_4421", amount: 950000, recipient: "OFFSHORE_WALLET_99", 
+         ip_address: "185.220.101.44", location: "Moscow", account_from: "SAVINGS"
+      })
+    });
+    
+    if(statusEl) {
+        statusEl.innerText = "✅ ATTACK MITIGATED & BLOCKED BY NEXUS SOC";
+        statusEl.style.color = "#00ff88";
+    }
+  }, 3000);
+}
