@@ -96,18 +96,16 @@
   .input-icon { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--text-dim); cursor:pointer; font-size:14px; transition:color 0.2s; user-select:none; }
   .input-icon:hover { color:var(--cyan); }
 
-  /* Section containers */
   .step-container { display: none; animation: fade-up 0.4s ease forwards; }
   .step-container.active { display: block; }
 
-  /* Biometric scanner */
   .bio-panel { display:flex; flex-direction:column; align-items:center; padding:30px; border:1px solid var(--border-dim); border-radius:8px; background:var(--bg-card); margin-bottom:18px; gap:16px; }
   .bio-scanner { width:90px; height:90px; border:2px solid var(--cyan); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:42px; position:relative; box-shadow:0 0 20px rgba(0,200,255,0.2); cursor:pointer; transition:all 0.3s; }
   .bio-scanner:hover { box-shadow:0 0 30px rgba(0,200,255,0.4); }
   .bio-scanner.scanning::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--cyan); box-shadow:0 0 8px var(--cyan); animation:scan-line 1.5s ease-in-out infinite; }
+  @keyframes scan-line { 0% { top:0; } 50% { top:calc(100% - 3px); } 100% { top:0; } }
   .bio-status { font-family:var(--font-mono); font-size:11px; color:var(--cyan); letter-spacing:2px; text-align:center; }
 
-  /* Pattern grid */
   .pattern-grid { display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:18px; }
   .pattern-dots { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; padding:20px; border:1px solid var(--border-dim); border-radius:8px; background:var(--bg-card); }
   .pattern-dot { width:28px; height:28px; border-radius:50%; border:2px solid var(--border-dim); background:var(--bg-panel); cursor:pointer; transition:all 0.15s; position:relative; }
@@ -205,7 +203,6 @@
     </div>
     <div style="margin-top:10px;">NEXUS SOC v4.2.1 · STRICT SEQUENCE ENFORCED</div>
   </div>
-
 </div>
 
 <script>
@@ -228,13 +225,8 @@ function hideStatus() {
 }
 
 function togglePassword() {
-  const input = document.getElementById('password'); // This must match your <input id="password">
-  if (input.type === 'password') {
-    input.type = 'text';
-    // Optional: Change the icon to a slashed eye
-  } else {
-    input.type = 'password';
-  }
+  const input = document.getElementById('password');
+  input.type = input.type === 'password' ? 'text' : 'password';
 }
 
 function getDeviceId() {
@@ -247,7 +239,7 @@ function getDeviceId() {
 }
 
 // ── STEP 1: CREDENTIALS ─────────────────────────────────────
-async function  processStep1() {
+async function processStep1() {
   const userId = document.getElementById('user-id').value.trim();
   const pass = document.getElementById('password').value.trim();
   const btn = document.getElementById('btn-step-1');
@@ -261,16 +253,12 @@ async function  processStep1() {
   btn.textContent = '⟳ VERIFYING...';
   hideStatus();
 
-  // Simulate quick backend credential check
+  // Transitions
   setTimeout(() => {
     btn.classList.remove('loading');
     btn.textContent = '▶ VERIFY CREDENTIALS';
-    
-    // Transition to Step 2
     document.getElementById('step-1').classList.remove('active');
     document.getElementById('step-2').classList.add('active');
-    
-    // Update Progress Bar
     document.getElementById('nav-step-1').classList.remove('active');
     document.getElementById('nav-step-1').classList.add('completed');
     document.getElementById('nav-step-2').classList.add('active');
@@ -296,51 +284,38 @@ async function triggerHardwareFingerprint() {
     const publicKeyOptions = {
       challenge: new Uint8Array(32),
       rp: { name: "NEXUS SOC Demo", id: "localhost" },
-      user: {
-        id: new Uint8Array(16),
-        name: "admin@nexus-soc.local",
-        displayName: "SOC Administrator"
-      },
+      user: { id: new Uint8Array(16), name: "admin@nexus-soc.local", displayName: "SOC Administrator" },
       pubKeyCredParams: [{alg: -7, type: "public-key"}],
-      authenticatorSelection: {
-        authenticatorAttachment: "platform", // Forces laptop scanner
-        userVerification: "required"
-      },
+      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
       timeout: 60000
     };
 
-    // Trigger Windows Hello / Mac TouchID
     await navigator.credentials.create({ publicKey: publicKeyOptions });
 
-    // Success!
     scanner.classList.remove('scanning');
     status.textContent = '✓ BIOMETRIC VERIFIED';
     status.style.color = 'var(--green)';
     scanner.style.borderColor = 'var(--green)';
     scanner.style.boxShadow   = '0 0 20px rgba(0,255,136,0.3)';
 
-    // Auto-advance to Step 3 after a tiny delay for visual feedback
     setTimeout(() => {
       document.getElementById('step-2').classList.remove('active');
       document.getElementById('step-3').classList.add('active');
-      
       document.getElementById('nav-step-2').classList.remove('active');
       document.getElementById('nav-step-2').classList.add('completed');
       document.getElementById('nav-step-3').classList.add('active');
-      
       buildPatternDots();
     }, 1200);
 
   } catch (err) {
     scanner.classList.remove('scanning');
-    status.textContent = '✗ OS SCAN CANCELLED OR FAILED';
+    status.textContent = '✗ OS SCAN CANCELLED';
     status.style.color = 'var(--red)';
-    scanner.style.borderColor = 'var(--red)';
-    showStatus('error', 'BIOMETRIC VERIFICATION FAILED. TRY AGAIN.');
+    showStatus('error', 'BIOMETRIC VERIFICATION FAILED.');
   }
 }
 
-// ── STEP 3: PATTERN & BACKEND LOGIN ─────────────────────────
+// ── STEP 3: PATTERN ──────────────────────────────────────────
 function buildPatternDots() {
   patternSequence = [];
   const grid = document.getElementById('pattern-dots');
@@ -360,49 +335,58 @@ function selectDot(index, dot) {
   dot.classList.add('selected');
   const display = document.getElementById('pattern-display');
   display.textContent = '● '.repeat(patternSequence.length).trim();
-  
   if (patternSequence.length >= 4) {
     display.style.color = 'var(--green)';
     display.textContent += '  ✓ PATTERN SET';
   }
 }
 
-try {
+async function processStep3() {
+  const userId = document.getElementById('user-id').value.trim();
+  const btn = document.getElementById('btn-step-3');
+
+  if (patternSequence.length < 4) {
+    showStatus('error', 'PATTERN MUST CONNECT AT LEAST 4 DOTS');
+    return;
+  }
+
+  btn.classList.add('loading');
+  btn.textContent = '⟳ AUTHENTICATING...';
+
+  const payload = {
+    user_id: userId,
+    auth_method: 'MULTI_FACTOR',
+    device_id: getDeviceId(),
+    ip_address: '127.0.0.1',
+    location: 'Local'
+  };
+
+  try {
     const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload),
+      body: JSON.stringify(payload),
     });
 
     const data = await res.json();
 
-    if (res.status === 403) {
-      showStatus('error', 'ACCESS DENIED — IP BLOCKED');
-      btn.classList.remove('loading');
-      btn.textContent = '▶ COMPLETE LOGIN';
-      return;
-    }
-
-    // 🛑 NEW STRICT CHECK: Stop and show error if backend rejects the User ID
     if (data.success === false) {
-      showStatus('error', data.error || 'AUTHENTICATION FAILED');
+      showStatus('error', data.error || 'INVALID USER ID — NOT FOUND');
       btn.classList.remove('loading');
       btn.textContent = '▶ COMPLETE LOGIN';
       return;
     }
 
-    if (data.success) {
-      showStatus('success', `ZERO-TRUST VERIFIED — ANOMALY SCORE: ${data.anomaly_score}`);
-      btn.textContent = '✓ SECURE LOGIN SUCCESSFUL';
-      setTimeout(() => { window.location.href = 'index.html'; }, 1500);
-      return;
-    }
+    showStatus('success', `ACCESS GRANTED — ANOMALY SCORE: ${data.anomaly_score}`);
+    btn.textContent = '✓ AUTHENTICATED';
+    setTimeout(() => { window.location.href = 'index.html'; }, 1500);
 
   } catch (err) {
-    // 🛑 REMOVED the "simulateLogin" cheat code! 
-    // Now it strictly fails if it cannot verify with the database.
-    showStatus('error', 'CRITICAL ERROR: COULD NOT CONNECT TO DATABASE');
+    showStatus('error', 'CRITICAL ERROR: BACKEND OFFLINE');
+    btn.classList.remove('loading');
+    btn.textContent = '▶ COMPLETE LOGIN';
   }
+}
 </script>
 </body>
 </html>
