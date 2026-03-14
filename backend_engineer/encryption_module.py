@@ -54,7 +54,8 @@ class EncryptionModule:
         )
         return kdf.derive(secret)
 
-    def encrypt(self, plaintext: bytes | str, context: str = "") -> bytes:
+    from typing import Union
+    def encrypt(self, plaintext: 'Union[bytes, str]', context: str = "") -> bytes:
         """
         Encrypt data using AES-256-GCM.
         
