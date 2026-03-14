@@ -9,6 +9,9 @@ Docs:   http://localhost:8000/docs
 
 import sys, sqlite3, os
 
+# FIX: Tell Python to look in the parent folder so it can find the modules
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 # ── Dependency check ──────────────────────────────────────────
 missing = []
 try: import fastapi
