@@ -2,8 +2,10 @@
 // NEXUS SOC — Banking Cyber Defense Dashboard Engine
 // ============================================================
 
-
 const BACKEND_URL = "http://127.0.0.1:8000";
+
+// --- Global Chart Variables ---
+let txChart, authChart, fraudChart;
 
 // ---------------- API CALL ----------------
 async function loadDashboard() {
@@ -11,89 +13,123 @@ async function loadDashboard() {
     const res = await fetch(`${BACKEND_URL}/api/dashboard/overview`);
     const data = await res.json();
 
-    document.getElementById("m-transactions").innerText =
-      data.total_transactions;
+    // 1. Update Numeric Metrics
+    updateMetric("m-transactions", data.total_transactions.toLocaleString());
+    updateMetric("m-suspicious", data.suspicious_activities);
+    updateMetric("m-users", data.active_users.toLocaleString());
+    updateMetric("m-blocked-ip", data.blocked_ips);
+    updateMetric("m-blocked-mac", data.blocked_macs);
 
-    document.getElementById("m-suspicious").innerText =
-      data.suspicious_activities;
-
-    document.getElementById("m-users").innerText =
-      data.active_users;
-
-    document.getElementById("m-blocked-ip").innerText =
-      data.blocked_ips;
-
-    document.getElementById("m-blocked-mac").innerText =
-      data.blocked_macs;
-
+    // 2. Update the Threat Gauge
     updateThreatGauge(data.threat_score);
 
+    // 3. Update the Live Charts
+    updateCharts(data);
+
   } catch (err) {
-    console.log("Backend not connected, simulation mode running");
+    console.log("Backend sync error. Check if FastAPI is running.");
   }
 }
 
-// auto refresh
-setInterval(loadDashboard, 5000);
-
-// ---------------- CLOCK ----------------
-function updateClock() {
-  const now = new Date();
-  document.getElementById("clock").innerText =
-    now.toTimeString().slice(0, 8);
+// Helper to safely update text
+function updateMetric(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.innerText = value;
 }
 
-setInterval(updateClock, 1000);
+// ---------------- CHART LOGIC ----------------
+function initCharts() {
+  // Transaction Chart
+  const txCtx = document.getElementById('transactionChart').getContext('2d');
+  txChart = new Chart(txCtx, {
+    type: 'line',
+    data: {
+      labels: Array(20).fill(''),
+      datasets: [{
+        label: 'Live Transactions',
+        data: Array(20).fill(0),
+        borderColor: '#00c8ff',
+        backgroundColor: 'rgba(0, 200, 255, 0.1)',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { display: false }, x: { display: false } }
+    }
+  });
+
+  // Fraud Sparkline
+  const fCtx = document.getElementById('fraudChart').getContext('2d');
+  fraudChart = new Chart(fCtx, {
+    type: 'bar',
+    data: {
+      labels: Array(15).fill(''),
+      datasets: [{
+        data: Array(15).fill(0),
+        backgroundColor: '#ff3860'
+      }]
+    },
+    options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { display: false }, x: { display: false } }
+    }
+  });
+}
+
+function updateCharts(data) {
+  if (txChart) {
+    // We simulate a trend using the live total_transactions
+    const newVal = data.total_transactions % 1000; 
+    txChart.data.datasets[0].data.push(newVal);
+    txChart.data.datasets[0].data.shift();
+    txChart.update('none');
+  }
+
+  if (fraudChart) {
+    fraudChart.data.datasets[0].data.push(data.suspicious_activities % 50);
+    fraudChart.data.datasets[0].data.shift();
+    fraudChart.update('none');
+  }
+}
 
 // ---------------- THREAT GAUGE ----------------
 function updateThreatGauge(score) {
-
   const circumference = 301.6;
   const pct = Math.min(score / 100, 1);
-
   const dashOffset = circumference - pct * circumference;
 
   const ring = document.getElementById("threat-ring");
+  const scoreLabel = document.getElementById("threat-score");
+  const statusLabel = document.getElementById("threat-count");
 
   if (ring) ring.style.strokeDashoffset = dashOffset;
+  if (scoreLabel) scoreLabel.innerText = score;
 
-  document.getElementById("threat-score").innerText = score;
-
-  if (score > 60) {
-    document.getElementById("threat-count").innerText =
-      "🔴 HIGH THREAT";
-  } else {
-    document.getElementById("threat-count").innerText =
-      "✓ NORMAL";
+  if (statusLabel) {
+    statusLabel.innerText = score > 60 ? "🔴 HIGH THREAT" : "✓ NORMAL";
+    statusLabel.style.color = score > 60 ? "#ff3860" : "#00ff88";
   }
 }
 
-// ---------------- FEED ----------------
-function addFeedItem(type, message) {
-
-  const feed = document.getElementById("feed-list");
-
-  const item = document.createElement("div");
-
-  item.className = "feed-item";
-
-  const time = new Date().toTimeString().slice(0,5);
-
-  item.innerHTML = `
-  <span class="feed-type">${type}</span>
-  <span class="feed-msg">${message}</span>
-  <span class="feed-time">${time}</span>
-  `;
-
-  feed.prepend(item);
+// ---------------- CLOCK ----------------
+function updateClock() {
+  const el = document.getElementById("clock");
+  if (el) el.innerText = new Date().toTimeString().slice(0, 8);
 }
 
 // ---------------- INIT ----------------
 document.addEventListener("DOMContentLoaded", () => {
-
+  initCharts();
   updateClock();
-
   loadDashboard();
-  setInterval(loadDashboard, 5000);
-
+  
+  // Set intervals
+  setInterval(updateClock, 1000);
+  setInterval(loadDashboard, 3000); // Faster updates for SOC feel
 });
