@@ -1,5 +1,5 @@
 # Python caches
-__pycache__/
+_pycache_/
 *.py[cod]
 *$py.class
 
@@ -13,3 +13,6 @@ ENV/
 # Local configuration
 .vscode/
 .DS_Store
+paysim.csv
+data_table.csv
+*.csv
