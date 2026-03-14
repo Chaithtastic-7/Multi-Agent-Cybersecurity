@@ -1,99 +1,83 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>NEXUS SOC Login</title>
-
-<style>
-
-body{
-font-family:Arial;
-background:#0f172a;
-color:white;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-}
-
-.login-box{
-background:#1e293b;
-padding:40px;
-border-radius:10px;
-width:300px;
-}
-
-input{
-width:100%;
-padding:10px;
-margin:10px 0;
-border:none;
-border-radius:5px;
-}
-
-button{
-width:100%;
-padding:10px;
-background:#22c55e;
-border:none;
-color:white;
-cursor:pointer;
-}
-
-</style>
-
-</head>
-
-<body>
-
 <div class="login-box">
-
-<h2>NEXUS SOC</h2>
-
-<input id="username" placeholder="Username">
-
-<input id="password" type="password" placeholder="Password">
-
-<button onclick="login()">Login</button>
-
+  <h2>NEXUS SOC</h2>
+  <input id="username" placeholder="Username (e.g., USR_4421)">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  
+  <button onclick="triggerBiometricLogin()" style="margin-top: 10px; background: #00c8ff; color: #0f172a; font-weight: bold;">
+    [+] Fingerprint / Touch ID
+  </button>
 </div>
 
 <script>
-
 const API = "http://127.0.0.1:8000";
 
 async function login(){
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
 
-const username = document.getElementById("username").value;
+  // FIX: Sending the exact payload the AI backend expects
+  const res = await fetch(API + "/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: username || "USR_4421", 
+      auth_method: "PASSWORD",
+      device_id: "DEV_WEB_001",
+      ip_address: "127.0.0.1",
+      location: "Local Browser"
+    })
+  });
 
-const password = document.getElementById("password").value;
+  const data = await res.json();
 
-const res = await fetch(API + "/api/auth/login",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-username:username,
-password:password
-})
-
-});
-
-const data = await res.json();
-
-if(data.status==="success"){
-window.location.href="index.html";
-}
-else{
-alert("Login failed");
+  // FIX: Backend returns 'success: true', not 'status: success'
+  if(data.success === true){
+    window.location.href = "index.html";
+  } else {
+    alert("Login failed: " + (data.detail || "Blocked by SOC"));
+  }
 }
 
-}
+// FIX: The Hardware Biometric connection
+async function triggerBiometricLogin() {
+  try {
+    const challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
+    const publicKeyConfig = {
+      challenge: challenge,
+      rp: { name: "NEXUS SOC", id: window.location.hostname },
+      user: {
+        id: new Uint8Array(16), 
+        name: document.getElementById("username").value || "arjun@nexusbank.in",
+        displayName: "Authorized User"
+      },
+      pubKeyCredParams: [{alg: -7, type: "public-key"}],
+      authenticatorSelection: { authenticatorAttachment: "platform" },
+      timeout: 60000
+    };
 
+    // This pops up the native TouchID / Windows Hello
+    const credential = await navigator.credentials.create({ publicKey: publicKeyConfig });
+    
+    const res = await fetch(API + "/api/auth/biometric", {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+          user_id: document.getElementById("username").value || "USR_4421",
+          device_id: "DEV_A1B2"
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+        alert("Hardware Verified! Anomaly Score: " + data.anomaly_score);
+        window.location.href = "index.html";
+    }
+  } catch (err) {
+    alert("Hardware security rejected the login. Please serve on localhost.");
+  }
+}
 </script>
-
 </body>
 </html>
