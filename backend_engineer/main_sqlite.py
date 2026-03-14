@@ -38,17 +38,17 @@ from datetime import datetime, timezone
 from typing import List
 import uvicorn
 
-from modules.auth_security     import AuthSecurityModule
-from modules.device_tracker    import DeviceTracker
-from modules.fraud_detection   import FraudDetectionModule
-from modules.anomaly_detection import AnomalyDetectionModule
-from modules.ip_blocker        import IPBlocker
-from modules.encryption_module import EncryptionModule
-from modules.event_logger      import EventLogger
-from agents.network_agent      import NetworkMonitoringAgent
-from agents.auth_agent         import AuthenticationAgent
-from agents.fraud_agent        import FraudDetectionAgent
-from agents.threat_agent       import ThreatResponseAgent
+from backend_engineer.auth_security     import AuthSecurityModule
+from backend_engineer.device_tracker    import DeviceTracker
+from DL_engineer.fraud_detection   import FraudDetectionModule
+from DL_engineer.anomaly_detection import AnomalyDetectionModule
+from backend_engineer.ip_blocker        import IPBlocker
+from backend_engineer.encryption_module import EncryptionModule
+from backend_engineer.event_logger      import EventLogger
+from DL_engineer.network_agent      import NetworkMonitoringAgent
+from DL_engineer.auth_agent         import AuthenticationAgent
+from DL_engineer.fraud_agent        import FraudDetectionAgent
+from DL_engineer.threat_agent       import ThreatResponseAgent
 
 # ── App ───────────────────────────────────────────────────────
 app = FastAPI(
