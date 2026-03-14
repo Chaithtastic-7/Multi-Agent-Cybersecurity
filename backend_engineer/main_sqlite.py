@@ -38,10 +38,11 @@ from datetime import datetime, timezone
 from typing import List
 import uvicorn
 
-from auth_security import AuthSecurityModule
-from device_tracker import DeviceTracker
-from event_logger import EventLogger
-from ip_blocker import IPBlocker
+from backend_engineer.auth_security import AuthSecurityModule
+from backend_engineer.auth_security import AuthSecurityModule
+from backend_engineer.device_tracker import DeviceTracker
+from backend_engineer.event_logger import EventLogger
+from backend_engineer.ip_blocker import IPBlocker
 from DL_engineer.fraud_detection   import FraudDetectionModule
 from DL_engineer.anomaly_detection import AnomalyDetectionModule
 from backend_engineer.encryption_module import EncryptionModule
