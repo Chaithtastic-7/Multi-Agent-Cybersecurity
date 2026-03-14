@@ -250,21 +250,44 @@ async function processStep1() {
   }
 
   btn.classList.add('loading');
-  btn.textContent = '⟳ VERIFYING...';
+  btn.textContent = '⟳ VERIFYING IDENTITY...';
   hideStatus();
 
-  // Transitions
-  setTimeout(() => {
-    btn.classList.remove('loading');
-    btn.textContent = '▶ VERIFY CREDENTIALS';
-    document.getElementById('step-1').classList.remove('active');
-    document.getElementById('step-2').classList.add('active');
-    document.getElementById('nav-step-1').classList.remove('active');
-    document.getElementById('nav-step-1').classList.add('completed');
-    document.getElementById('nav-step-2').classList.add('active');
-  }, 800);
-}
+  try {
+    // 🛑 REAL-TIME DATABASE CHECK
+    const res = await fetch(`${BACKEND_URL}/api/auth/validate-id`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId })
+    });
 
+    const data = await res.json();
+
+    if (data.valid === false) {
+      showStatus('error', data.error);
+      btn.classList.remove('loading');
+      btn.textContent = '▶ VERIFY CREDENTIALS';
+      return; // 🛑 Stops the user right here!
+    }
+
+    // If valid, proceed to Step 2
+    showStatus('success', 'IDENTITY VERIFIED — PROCEED TO BIOMETRIC SCAN');
+    setTimeout(() => {
+      btn.classList.remove('loading');
+      btn.textContent = '▶ VERIFY CREDENTIALS';
+      document.getElementById('step-1').classList.remove('active');
+      document.getElementById('step-2').classList.add('active');
+      document.getElementById('nav-step-1').classList.remove('active');
+      document.getElementById('nav-step-1').classList.add('completed');
+      document.getElementById('nav-step-2').classList.add('active');
+      hideStatus();
+    }, 1000);
+
+  } catch (err) {
+    showStatus('error', 'SECURITY SERVER OFFLINE');
+    btn.classList.remove('loading');
+  }
+}
 // ── STEP 2: HARDWARE FINGERPRINT ────────────────────────────
 async function triggerHardwareFingerprint() {
   const scanner = document.getElementById('fp-scanner');
