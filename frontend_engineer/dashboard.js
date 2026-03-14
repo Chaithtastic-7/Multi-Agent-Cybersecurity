@@ -3,7 +3,55 @@
 //  NEXUS SOC — Banking Cyber Defense Dashboard Engine
 //  Simulates real-time multi-agent cybersecurity monitoring
 // ============================================================
- 
+
+// ─── Backend Connection ──────────────────────────────────────
+// Change this to "http://localhost:8000" once backend is running
+const BACKEND_URL = "http://localhost:8000";
+
+// Connect to live backend if available, else run in simulation mode
+async function fetchFromBackend(endpoint) {
+  if (!BACKEND_URL) return null;
+  try {
+    const res = await fetch(BACKEND_URL + endpoint);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null; // backend offline — simulation mode continues
+  }
+}
+
+// Live WebSocket feed from backend
+function connectWebSocket() {
+  if (!BACKEND_URL) return;
+  try {
+    const ws = new WebSocket(BACKEND_URL.replace('http', 'ws') + '/ws/live-feed');
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'ANOMALY' || data.type === 'FRAUD_ALERT') {
+        addFeedItem('alert', data.description || data.message || JSON.stringify(data));
+      } else if (data.type === 'BLOCKED') {
+        addFeedItem('block', `IP ${data.ip || ''} blocked — ${data.reason || ''}`);
+      } else if (data.type === 'FRAUD_ALERT') {
+        addFeedItem('warn', `Fraud detected — score ${data.fraud_score}`);
+      }
+    };
+    ws.onerror = () => {}; // silent fail — simulation mode takes over
+  } catch(e) {}
+}
+
+// Pull live metrics from backend every 5 seconds
+async function syncWithBackend() {
+  const data = await fetchFromBackend('/api/dashboard/overview');
+  if (!data) return; // backend offline, keep simulation running
+  if (data.total_transactions) animateCounter('m-transactions', data.total_transactions);
+  if (data.suspicious_activities) animateCounter('m-suspicious', data.suspicious_activities);
+  if (data.active_users) animateCounter('m-users', data.active_users);
+  if (data.blocked_ips) animateCounter('m-blocked-ip', data.blocked_ips);
+  if (data.blocked_macs) animateCounter('m-blocked-mac', data.blocked_macs);
+  if (data.threat_score) updateThreatGauge(data.threat_score);
+}
+
+
 // ─── Clock ───────────────────────────────────────────────────
 function updateClock() {
   const now = new Date();
@@ -12,7 +60,7 @@ function updateClock() {
 }
 setInterval(updateClock, 1000);
 updateClock();
- 
+
 // ─── Simulation State ────────────────────────────────────────
 const state = {
   running: false,
@@ -25,7 +73,7 @@ const state = {
   attackMode: false,
   intervalIds: [],
 };
- 
+
 // ─── Sample Data ─────────────────────────────────────────────
 const AUTH_DATA = [
   { user:'USR_4421', method:'PATTERN', device:'Unknown Android', ip:'192.168.4.22', loc:'Mumbai', time:'09:47', ok:false, anomaly:'HIGH', prevMethod:'FINGERPRINT' },
@@ -36,7 +84,7 @@ const AUTH_DATA = [
   { user:'USR_3391', method:'PATTERN', device:'iPad Air', ip:'10.10.5.22', loc:'Chennai', time:'09:58', ok:true, anomaly:'LOW', prevMethod:'PATTERN' },
   { user:'USR_8812', method:'PASSWORD', device:'Unknown PC', ip:'45.142.212.100', loc:'Unknown', time:'10:01', ok:false, anomaly:'HIGH', prevMethod:'FINGERPRINT' },
 ];
- 
+
 const NETWORK_DATA = [
   { ip:'192.168.4.22',    mac:'A4:B2:C8:D1:E9:F2', device:'Mobile',   freq:'HIGH',   loc:'Mumbai',    status:'SUSPICIOUS' },
   { ip:'45.142.212.100',  mac:'F8:3A:77:C2:11:DE', device:'Unknown',  freq:'EXTREME', loc:'Unknown',   status:'BLOCKED' },
@@ -46,7 +94,7 @@ const NETWORK_DATA = [
   { ip:'172.16.8.44',     mac:'AC:DE:48:00:11:22', device:'Desktop',  freq:'MEDIUM', loc:'Pune',      status:'FLAGGED' },
   { ip:'192.168.1.105',   mac:'78:4F:43:55:6A:BC', device:'Mobile',   freq:'NORMAL', loc:'Hyderabad', status:'TRUSTED' },
 ];
- 
+
 const FEED_TEMPLATES = [
   { type:'alert',  msgs:['Suspicious login from {ip} — auth change detected for {user}',
                          'Credential stuffing attempt detected — {n} attempts from {ip}',
@@ -64,7 +112,7 @@ const FEED_TEMPLATES = [
                          'False positive cleared — {user} confirmed legitimate login',
                          'IP {ip} removed from blocklist after manual review'] },
 ];
- 
+
 const ATTACK_SCENARIOS = [
   {
     name: 'COSMOS BANK STYLE ATTACK',
@@ -95,17 +143,17 @@ const ATTACK_SCENARIOS = [
     ]
   },
 ];
- 
+
 // ─── Chart.js Configs ────────────────────────────────────────
 let txChart, authChart, fraudChart;
- 
+
 function initCharts() {
   // Transaction + Anomaly Chart
   const txCtx = document.getElementById('transactionChart').getContext('2d');
   const labels = Array.from({length:24}, (_,i) => `${String(i).padStart(2,'0')}:00`);
   const txData = [1200,900,700,500,400,300,400,800,2100,3400,4100,4500,4300,3900,4200,4600,4100,3800,3500,3200,2900,2400,2100,1800];
   const anomData = [2,1,0,0,0,0,0,1,3,8,15,22,18,12,10,8,30,25,18,12,9,7,4,3];
- 
+
   txChart = new Chart(txCtx, {
     type: 'bar',
     data: {
@@ -167,7 +215,7 @@ function initCharts() {
       }
     }
   });
- 
+
   // Auth Doughnut
   const authCtx = document.getElementById('authChart').getContext('2d');
   authChart = new Chart(authCtx, {
@@ -198,7 +246,7 @@ function initCharts() {
       }
     }
   });
- 
+
   // Fraud sparkline
   const fCtx = document.getElementById('fraudChart').getContext('2d');
   const fraudData = [3,5,4,8,6,4,3,5,12,18,8,6,4,3,7,22,15,8,5,4,3,6,4,3];
@@ -232,7 +280,7 @@ function initCharts() {
     }
   });
 }
- 
+
 // ─── Table Rendering ─────────────────────────────────────────
 function renderAuthTable(data) {
   const tbody = document.getElementById('auth-tbody');
@@ -257,7 +305,7 @@ function renderAuthTable(data) {
     tbody.appendChild(tr);
   });
 }
- 
+
 function renderNetworkTable(data) {
   const tbody = document.getElementById('network-tbody');
   tbody.innerHTML = '';
@@ -283,7 +331,7 @@ function renderNetworkTable(data) {
     tbody.appendChild(tr);
   });
 }
- 
+
 function addGeoDots() {
   const map = document.getElementById('geo-dots');
   const locations = [
@@ -302,7 +350,7 @@ function addGeoDots() {
     map.appendChild(dot);
   });
 }
- 
+
 // ─── Threat Score Gauge ──────────────────────────────────────
 function updateThreatGauge(score) {
   const circumference = 301.6;
@@ -314,7 +362,7 @@ function updateThreatGauge(score) {
   if (label) label.textContent = score;
   document.getElementById('threat-count').textContent = score > 60 ? '🔴 HIGH THREAT' : '✓ NORMAL';
 }
- 
+
 // ─── Counter Animation ───────────────────────────────────────
 function animateCounter(id, target, prefix='', suffix='') {
   const el = document.getElementById(id);
@@ -330,7 +378,7 @@ function animateCounter(id, target, prefix='', suffix='') {
     if (step >= steps) clearInterval(interval);
   }, 30);
 }
- 
+
 // ─── Live Feed ───────────────────────────────────────────────
 function addFeedItem(type, msg, time) {
   const feed = document.getElementById('feed-list');
@@ -346,7 +394,7 @@ function addFeedItem(type, msg, time) {
   feed.insertBefore(item, feed.firstChild);
   if (feed.children.length > 20) feed.removeChild(feed.lastChild);
 }
- 
+
 // ─── Timeline ─────────────────────────────────────────────────
 function addTimelineItem(type, agent, text) {
   const timeline = document.getElementById('timeline');
@@ -368,14 +416,14 @@ function addTimelineItem(type, agent, text) {
   else timeline.appendChild(item);
   if (timeline.children.length > 12) timeline.removeChild(timeline.lastChild);
 }
- 
+
 // ─── Simulation Engine ───────────────────────────────────────
 function startSimulation() {
   if (state.running) return;
   state.running = true;
   document.getElementById('sim-status').textContent = '● SIMULATION RUNNING — MONITORING LIVE';
   document.getElementById('sim-status').style.color = 'var(--green)';
- 
+
   // Random feed generator
   const feedId = setInterval(() => {
     if (!state.running) return;
@@ -393,24 +441,20 @@ function startSimulation() {
       .replace('{mm}', String(Math.floor(Math.random()*60)).padStart(2,'0'));
     addFeedItem(tpl.type, msg);
   }, 3500);
- 
-  async function fetchMetrics() {
-  try {
-    const response = await fetch("http://localhost:8000/api/dashboard/overview");
-    const data = await response.json();
 
-    document.getElementById("m-transactions").textContent = data.total_transactions;
-    document.getElementById("m-suspicious").textContent = data.suspicious_activities;
-    document.getElementById("m-users").textContent = data.active_users;
-    document.getElementById("m-blocked-ip").textContent = data.blocked_ips;
+  // Metrics updater
+  const metricsId = setInterval(() => {
+    if (!state.running) return;
+    state.transactions += Math.floor(Math.random() * 40 + 10);
+    state.users = Math.max(3000, state.users + Math.floor(Math.random() * 20 - 8));
+    if (Math.random() < 0.15) { state.suspicious++; animateCounter('m-suspicious', state.suspicious); }
+    animateCounter('m-transactions', state.transactions);
+    animateCounter('m-users', state.users);
 
-  } catch (error) {
-    console.error("API connection error:", error);
-  }
-}
+    // Update agent values
+    document.getElementById('agent-net-val').textContent = (Math.floor(Math.random()*800+2200)).toLocaleString();
+  }, 2000);
 
-setInterval(fetchMetrics, 3000);
- 
   // Threat score drift
   const threatId = setInterval(() => {
     if (!state.running) return;
@@ -421,7 +465,7 @@ setInterval(fetchMetrics, 3000);
       addFeedItem('alert', `⚠ Threat score critical: ${state.threatScore}/100 — auto-response triggered`);
     }
   }, 4000);
- 
+
   // Chart live data update
   const chartId = setInterval(() => {
     if (!state.running || !txChart) return;
@@ -432,7 +476,7 @@ setInterval(fetchMetrics, 3000);
     anom.push(Math.floor(Math.random() * (state.attackMode ? 60 : 20)));
     anom.shift();
     txChart.update('none');
- 
+
     if (fraudChart) {
       const fd = fraudChart.data.datasets[0].data;
       fd.push(Math.floor(Math.random() * (state.attackMode ? 35 : 8)));
@@ -440,25 +484,25 @@ setInterval(fetchMetrics, 3000);
       fraudChart.update('none');
     }
   }, 2500);
- 
+
   state.intervalIds = [feedId, metricsId, threatId, chartId];
 }
- 
+
 // ─── Attack Simulation ────────────────────────────────────────
 function triggerAttack() {
   const scenario = ATTACK_SCENARIOS[Math.floor(Math.random() * ATTACK_SCENARIOS.length)];
   state.attackMode = true;
- 
+
   document.getElementById('sim-status').textContent = `⚡ ATTACK SIMULATED: ${scenario.name}`;
   document.getElementById('sim-status').style.color = 'var(--red)';
- 
+
   addTimelineItem('alert', 'THREAT AGENT', `<strong>ATTACK SCENARIO: ${scenario.name}</strong> — Simulation initiated`);
- 
+
   scenario.events.forEach(evt => {
     setTimeout(() => {
       addFeedItem(evt.type, evt.msg);
       addTimelineItem(evt.type, 'MULTI-AGENT', evt.msg);
- 
+
       // Update metrics dramatically
       if (evt.type === 'alert') {
         state.suspicious += Math.floor(Math.random() * 15 + 5);
@@ -470,7 +514,7 @@ function triggerAttack() {
         state.blockedIPs += 1;
         animateCounter('m-blocked-ip', state.blockedIPs);
         addBlockedIP(`${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`);
- 
+
         // Update agent response counter
         const agentEl = document.getElementById('agent-threat-val');
         if (agentEl) agentEl.textContent = state.blockedIPs;
@@ -481,7 +525,7 @@ function triggerAttack() {
       }
     }, evt.delay);
   });
- 
+
   // Auto-resolve after scenario
   setTimeout(() => {
     state.attackMode = false;
@@ -492,10 +536,10 @@ function triggerAttack() {
     document.getElementById('sim-status').textContent = '● SIMULATION RUNNING — MONITORING LIVE';
     document.getElementById('sim-status').style.color = 'var(--green)';
   }, scenario.events[scenario.events.length-1].delay + 3000);
- 
+
   if (!state.running) startSimulation();
 }
- 
+
 function addBlockedIP(ip) {
   const list = document.getElementById('blocked-list');
   const item = document.createElement('div');
@@ -510,7 +554,7 @@ function addBlockedIP(ip) {
   list.insertBefore(item, list.firstChild);
   if (list.children.length > 6) list.removeChild(list.lastChild);
 }
- 
+
 // ─── Reset ────────────────────────────────────────────────────
 function resetSystem() {
   state.intervalIds.forEach(clearInterval);
@@ -523,7 +567,7 @@ function resetSystem() {
   state.blockedMACs = 19;
   state.threatScore = 75;
   state.attackMode = false;
- 
+
   document.getElementById('m-transactions').textContent = '48,291';
   document.getElementById('m-suspicious').textContent = '127';
   document.getElementById('m-users').textContent = '3,847';
@@ -533,7 +577,7 @@ function resetSystem() {
   document.getElementById('sim-status').textContent = '● SIMULATION READY — CLICK START TO BEGIN';
   document.getElementById('sim-status').style.color = '';
 }
- 
+
 // ─── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initCharts();
@@ -541,7 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderNetworkTable(NETWORK_DATA);
   addGeoDots();
   updateThreatGauge(state.threatScore);
- 
+
   // Staggered mount animations
   document.querySelectorAll('.metric-card, .panel').forEach((el, i) => {
     el.style.opacity = '0';
@@ -552,4 +596,11 @@ document.addEventListener('DOMContentLoaded', () => {
       el.style.transform = 'translateY(0)';
     }, 80 + i * 40);
   });
+});
+
+// ─── Backend Sync (added) ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  connectWebSocket();
+  syncWithBackend();
+  setInterval(syncWithBackend, 5000);
 });
