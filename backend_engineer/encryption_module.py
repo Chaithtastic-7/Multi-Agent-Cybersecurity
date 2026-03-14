@@ -29,8 +29,9 @@ class EncryptionModule:
     NONCE_LENGTH = 12      # 96 bits for GCM
     SALT_LENGTH = 16       # 128 bits
     KDF_ITERATIONS = 310_000  # NIST recommended 2024
+    from typing import Optional
 
-    def __init__(self, master_key: bytes = None):
+    def __init__(self, master_key: 'Optional[bytes]' = None):
         """
         Initialize with a master key.
         In production, this should come from HSM or secrets manager (e.g., AWS KMS).
