@@ -6,7 +6,7 @@
 
 // ─── Backend Connection ──────────────────────────────────────
 // Change this to "http://localhost:8000" once backend is running
-const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = "http://localhost:8000/docs";
 
 // Connect to live backend if available, else run in simulation mode
 async function fetchFromBackend(endpoint) {
@@ -19,6 +19,16 @@ async function fetchFromBackend(endpoint) {
     return null; // backend offline — simulation mode continues
   }
 }
+async function loadDashboard() {
+    const response = await fetch("http://localhost:8000/api/dashboard/overview");
+    const data = await response.json();
+
+    document.getElementById("totalUsers").innerText = data.total_users;
+    document.getElementById("activeDevices").innerText = data.active_devices;
+    document.getElementById("threatsDetected").innerText = data.threats_detected;
+}
+
+loadDashboard();
 
 // Live WebSocket feed from backend
 function connectWebSocket() {

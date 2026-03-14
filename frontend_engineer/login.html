@@ -834,22 +834,30 @@ function hideStatus() {
 }
  
 // ── Login handler ─────────────────────────────────────────────
-async function handleLogin(e) {
-  e.preventDefault();
-  const userId = document.getElementById('user-id').value.trim();
-  const btn    = document.getElementById('login-btn');
- 
-  if (!userId) { showStatus('error', 'USER ID IS REQUIRED'); return; }
- 
-  // Validate auth method
-  if ((currentMethod === 'fingerprint' || currentMethod === 'facial') && !bioScanned) {
-    showStatus('error', `COMPLETE ${currentMethod.toUpperCase()} SCAN FIRST`);
-    return;
-  }
-  if (currentMethod === 'pattern' && patternSequence.length < 4) {
-    showStatus('error', 'PATTERN MUST BE AT LEAST 4 POINTS');
-    return;
-  }
+async function loginUser() {
+
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+
+    const response = await fetch("http://localhost:8000/api/auth/login", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: username,
+            password: password
+        })
+    });
+
+    const result = await response.json();
+
+    if(result.status === "success"){
+        window.location.href = "index.html";
+    } else {
+        alert("Login failed");
+    }
+}
  
   // Loading state
   btn.classList.add('loading');
@@ -905,7 +913,7 @@ async function handleLogin(e) {
  
   btn.classList.remove('loading');
   btn.textContent = '▶ AUTHENTICATE';
-}
+
  
 // Demo mode when backend is offline
 function simulateLogin(userId, btn) {
