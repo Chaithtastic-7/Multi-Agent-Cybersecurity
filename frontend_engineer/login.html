@@ -362,28 +362,7 @@ function selectDot(index, dot) {
   }
 }
 
-async function processStep3() {
-  const userId = document.getElementById('user-id').value.trim();
-  const btn = document.getElementById('btn-step-3');
-
-  if (patternSequence.length < 4) {
-    showStatus('error', 'PATTERN MUST CONNECT AT LEAST 4 DOTS');
-    return;
-  }
-
-  btn.classList.add('loading');
-  btn.textContent = '⟳ EXECUTING FINAL AUTHENTICATION...';
-  hideStatus();
-
-  const payload = {
-    user_id:     userId,
-    auth_method: 'MULTI_FACTOR', // Tell the backend all 3 passed
-    device_id:   getDeviceId(),
-    ip_address:  '127.0.0.1',
-    location:    'Local'
-  };
-
-  try {
+try {
     const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -399,6 +378,14 @@ async function processStep3() {
       return;
     }
 
+    // 🛑 NEW STRICT CHECK: Stop and show error if backend rejects the User ID
+    if (data.success === false) {
+      showStatus('error', data.error || 'AUTHENTICATION FAILED');
+      btn.classList.remove('loading');
+      btn.textContent = '▶ COMPLETE LOGIN';
+      return;
+    }
+
     if (data.success) {
       showStatus('success', `ZERO-TRUST VERIFIED — ANOMALY SCORE: ${data.anomaly_score}`);
       btn.textContent = '✓ SECURE LOGIN SUCCESSFUL';
@@ -407,12 +394,10 @@ async function processStep3() {
     }
 
   } catch (err) {
-    // Demo fallback if backend drops
-    showStatus('success', 'ZERO-TRUST VERIFIED — REDIRECTING (DEMO MODE)');
-    btn.textContent = '✓ SECURE LOGIN SUCCESSFUL';
-    setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+    // 🛑 REMOVED the "simulateLogin" cheat code! 
+    // Now it strictly fails if it cannot verify with the database.
+    showStatus('error', 'CRITICAL ERROR: COULD NOT CONNECT TO DATABASE');
   }
-}
 </script>
 </body>
 </html>

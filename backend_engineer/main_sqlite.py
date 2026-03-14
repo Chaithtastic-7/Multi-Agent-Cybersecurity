@@ -171,9 +171,9 @@ async def get_overview():
     }
 
 # Login — anomaly detection + device tracking
+# Login — strict database verification
 @app.post("/api/auth/login")
 async def process_login(data: LoginRequest):
-    # Now we safely access attributes. FastAPI guarantees these exist and are the correct type!
     user_id     = data.user_id
     auth_method = data.auth_method
     device_id   = data.device_id
@@ -181,7 +181,17 @@ async def process_login(data: LoginRequest):
     mac         = data.mac_address
     location    = data.location
 
+    db = get_db()
+    
+    # 🛑 STRICT CHECK: Does this User ID actually exist in the database?
+    user_check = db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if not user_check:
+        db.close()
+        # Immediately reject if the user is not in the database
+        return {"success": False, "error": "INVALID USER ID — NOT FOUND IN DATABASE"}
+
     if ip_blocker.is_blocked(ip, mac):
+        db.close()
         raise HTTPException(status_code=403, detail="Access denied — IP/MAC blocked")
 
     device_trust  = device_tracker.check_device(user_id, device_id, mac or "", ip)
@@ -194,14 +204,13 @@ async def process_login(data: LoginRequest):
         ip=ip, location=location, anomaly_score=anomaly_score, success=True
     )
 
-    # Save to SQLite
     import uuid
-    db = get_db()
     db.execute(
         "INSERT INTO authentication_history (auth_id,user_id,auth_method,device_id,ip_address,mac_address,location_city,success,anomaly_score) VALUES (?,?,?,?,?,?,?,?,?)",
         (str(uuid.uuid4()), user_id, auth_method, device_id, ip, mac, location, 1, anomaly_score)
     )
-    db.commit(); db.close()
+    db.commit()
+    db.close()
 
     if anomaly_score > 70:
         await threat_agent.respond(user_id=user_id, ip=ip, mac=mac, score=anomaly_score)
@@ -359,8 +368,10 @@ async def ws_live_feed(websocket: WebSocket, token: str = Query(None)):
         manager.disconnect(websocket)
 
 # ── Background agents ─────────────────────────────────────────
+# ── Background agents ─────────────────────────────────────────
 async def run_agents():
-    while True:
+    # 🛑 Changed 'while True:' to a strict limit of 30 loops!
+    for _ in range(30):
         try:
             events = (await net_agent.tick() +
                       await auth_agent.tick() +
@@ -371,6 +382,9 @@ async def run_agents():
         except Exception as ex:
             logger.error(f"Agent error: {ex}")
         await asyncio.sleep(5)
+    
+    # Logs this to the terminal when finished
+    logger.info("🛑 Simulation complete. Maximum 30 events reached. Halting agents.")
 
 @app.on_event("startup")
 async def startup():

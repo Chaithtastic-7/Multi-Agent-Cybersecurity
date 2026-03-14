@@ -122,12 +122,31 @@ def init():
 
     # ── Seed Sample Data ───────────────────────────────────────
     users = [
-        ("USR_4421", "Arjun Sharma",  "arjun@nexusbank.in",  "hash_arjun",  "FROZEN",  "CRITICAL"),
-        ("USR_1190", "Priya Mehta",   "priya@nexusbank.in",  "hash_priya",  "ACTIVE",  "MEDIUM"),
-        ("USR_7734", "Rahul Verma",   "rahul@nexusbank.in",  "hash_rahul",  "ACTIVE",  "LOW"),
-        ("USR_2234", "Sneha Kapoor",  "sneha@nexusbank.in",  "hash_sneha",  "ACTIVE",  "HIGH"),
-        ("USR_5512", "Vikram Singh",  "vikram@nexusbank.in", "hash_vikram", "ACTIVE",  "LOW"),
-        ("USR_3391", "Anita Nair",    "anita@nexusbank.in",  "hash_anita",  "ACTIVE",  "LOW"),
+        # Original test users
+        ("USR_4421", "Arjun Sharma",  "arjun@nexusbank.in",  "hash_arjun",  "FROZEN", "CRITICAL"),
+        ("USR_1190", "Priya Mehta",   "priya@nexusbank.in",  "hash_priya",  "ACTIVE", "MEDIUM"),
+        
+        # New 20 Employee Pool for strict database testing
+        ("USR_1001", "Aarav Patel",   "aarav.p@nexusbank.in",  "hash_aarav",  "ACTIVE", "LOW"),
+        ("USR_1002", "Rohan Gupta",   "rohan.g@nexusbank.in",  "hash_rohan",  "ACTIVE", "MEDIUM"),
+        ("USR_1003", "Ananya Singh",  "ananya.s@nexusbank.in", "hash_ananya", "ACTIVE", "LOW"),
+        ("USR_1004", "Vikram Reddy",  "vikram.r@nexusbank.in", "hash_vikram", "ACTIVE", "HIGH"),
+        ("USR_1005", "Neha Desai",    "neha.d@nexusbank.in",   "hash_neha",   "ACTIVE", "LOW"),
+        ("USR_1006", "Rahul Verma",   "rahul.v@nexusbank.in",  "hash_rahul",  "ACTIVE", "LOW"),
+        ("USR_1007", "Sneha Kapoor",  "sneha.k@nexusbank.in",  "hash_sneha",  "ACTIVE", "MEDIUM"),
+        ("USR_1008", "Amit Kumar",    "amit.k@nexusbank.in",   "hash_amit",   "ACTIVE", "LOW"),
+        ("USR_1009", "Pooja Joshi",   "pooja.j@nexusbank.in",  "hash_pooja",  "ACTIVE", "LOW"),
+        ("USR_1010", "Karan Malhotra","karan.m@nexusbank.in",  "hash_karan",  "ACTIVE", "MEDIUM"),
+        ("USR_1011", "Riya Jain",     "riya.j@nexusbank.in",   "hash_riya",   "ACTIVE", "LOW"),
+        ("USR_1012", "Sanjay Das",    "sanjay.d@nexusbank.in", "hash_sanjay", "ACTIVE", "LOW"),
+        ("USR_1013", "Meera Reddy",   "meera.r@nexusbank.in",  "hash_meera",  "ACTIVE", "HIGH"),
+        ("USR_1014", "Arjun Nair",    "arjun.n@nexusbank.in",  "hash_arjun",  "ACTIVE", "LOW"),
+        ("USR_1015", "Kavya Iyer",    "kavya.i@nexusbank.in",  "hash_kavya",  "ACTIVE", "LOW"),
+        ("USR_1016", "Aditya Rao",    "aditya.r@nexusbank.in", "hash_aditya", "ACTIVE", "MEDIUM"),
+        ("USR_1017", "Nidhi Menon",   "nidhi.m@nexusbank.in",  "hash_nidhi",  "ACTIVE", "LOW"),
+        ("USR_1018", "Varun Bhatia",  "varun.b@nexusbank.in",  "hash_varun",  "ACTIVE", "LOW"),
+        ("USR_1019", "Swati Pillai",  "swati.p@nexusbank.in",  "hash_swati",  "ACTIVE", "LOW"),
+        ("USR_1020", "Kabir Khan",    "kabir.k@nexusbank.in",  "hash_kabir",  "ACTIVE", "LOW"),
     ]
     c.executemany(
         "INSERT INTO users (user_id,name,email,password_hash,account_status,risk_level) VALUES (?,?,?,?,?,?)",
@@ -179,10 +198,10 @@ def init():
     print("           authentication_history")
     print()
     print("  Sample data loaded:")
-    print("    6 users  |  4 devices  |  4 threats")
+    print("    22 users  |  4 devices  |  4 threats")
     print("    4 blocked addresses")
     print()
-    print("  Next step: send nexus_soc.db to backend engineer")
+    print("  Next step: run your FastAPI server!")
     print("=" * 50)
 
 if __name__ == "__main__":
