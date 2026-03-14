@@ -67,17 +67,22 @@ app = FastAPI(
     description="Multi-Agent Cybersecurity Defense System",
     version="4.2.1"
 )
+# ── Configure Allowed Origins for CORS ──
 ALLOWED_ORIGINS = [
-    "http://localhost:3000",        # For local frontend development
-    "http://localhost:8000",        # If frontend is served on the same port
-    "https://soc.nexusbank.in"      # Your production frontend domain
+    "http://localhost:3000",        
+    "http://localhost:8000",        
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:5500",        # Add Live Server default IP
+    "http://localhost:5500",        # Add Live Server alternate localhost
+    "null"                          # Needed if opening HTML directly (file://)
 ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=ALLOWED_ORIGINS,  # FIX: Use the specific list instead of ["*"]
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],  
+    allow_headers=["*"],  
 )
 
 logging.basicConfig(level=logging.INFO,
