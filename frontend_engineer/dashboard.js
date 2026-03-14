@@ -4,7 +4,7 @@
 
 // ─── Backend Connection ──────────────────────────────────────
 // Use the base URL of your FastAPI server
-const BACKEND_URL = "http://localhost:8000"; // DO NOT include /docs here
+const BACKEND_URL = "http://192.168.1.45:8000"; // DO NOT include /docs here
 
 async function loadDashboard() {
     try {
