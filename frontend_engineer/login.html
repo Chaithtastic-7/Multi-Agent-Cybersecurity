@@ -228,8 +228,13 @@ function hideStatus() {
 }
 
 function togglePassword() {
-  const input = document.getElementById('password');
-  input.type = input.type === 'password' ? 'text' : 'password';
+  const input = document.getElementById('password'); // This must match your <input id="password">
+  if (input.type === 'password') {
+    input.type = 'text';
+    // Optional: Change the icon to a slashed eye
+  } else {
+    input.type = 'password';
+  }
 }
 
 function getDeviceId() {
@@ -242,7 +247,7 @@ function getDeviceId() {
 }
 
 // ── STEP 1: CREDENTIALS ─────────────────────────────────────
-function processStep1() {
+async function  processStep1() {
   const userId = document.getElementById('user-id').value.trim();
   const pass = document.getElementById('password').value.trim();
   const btn = document.getElementById('btn-step-1');
