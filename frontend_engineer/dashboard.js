@@ -1,3 +1,4 @@
+
 // ============================================================
 //  NEXUS SOC — Banking Cyber Defense Dashboard Engine
 //  Simulates real-time multi-agent cybersecurity monitoring
@@ -393,18 +394,22 @@ function startSimulation() {
     addFeedItem(tpl.type, msg);
   }, 3500);
  
-  // Metrics updater
-  const metricsId = setInterval(() => {
-    if (!state.running) return;
-    state.transactions += Math.floor(Math.random() * 40 + 10);
-    state.users = Math.max(3000, state.users + Math.floor(Math.random() * 20 - 8));
-    if (Math.random() < 0.15) { state.suspicious++; animateCounter('m-suspicious', state.suspicious); }
-    animateCounter('m-transactions', state.transactions);
-    animateCounter('m-users', state.users);
- 
-    // Update agent values
-    document.getElementById('agent-net-val').textContent = (Math.floor(Math.random()*800+2200)).toLocaleString();
-  }, 2000);
+  async function fetchMetrics() {
+  try {
+    const response = await fetch("http://localhost:8000/api/dashboard/overview");
+    const data = await response.json();
+
+    document.getElementById("m-transactions").textContent = data.total_transactions;
+    document.getElementById("m-suspicious").textContent = data.suspicious_activities;
+    document.getElementById("m-users").textContent = data.active_users;
+    document.getElementById("m-blocked-ip").textContent = data.blocked_ips;
+
+  } catch (error) {
+    console.error("API connection error:", error);
+  }
+}
+
+setInterval(fetchMetrics, 3000);
  
   // Threat score drift
   const threatId = setInterval(() => {
