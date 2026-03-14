@@ -43,7 +43,12 @@ class EncryptionModule:
         Derive master key from environment variable or generate.
         In production: load from HSM / AWS KMS / Azure Key Vault.
         """
-        secret = os.environ.get("SOC_MASTER_SECRET", "nexus-soc-demo-secret-do-not-use-in-prod").encode()
+        secret_str = os.environ.get("SOC_MASTER_SECRET")
+        if not secret_str:
+            # FIX: Fail securely instead of using a hardcoded fallback
+            raise ValueError("CRITICAL SECURITY ERROR: SOC_MASTER_SECRET environment variable is not set. System cannot safely encrypt data.")
+            
+        secret = secret_str.encode()
         salt = b"nexus-soc-fixed-salt-v1"  # In production: stored in HSM
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
@@ -167,8 +172,9 @@ class EncryptionModule:
         """
         Generate a time-limited HMAC token for MFA or verification.
         """
-        from datetime import datetime
-        timestamp = int(datetime.utcnow().timestamp() // (ttl_minutes * 60))
+        # FIX: Replaced utcnow() with timezone-aware datetime
+        from datetime import datetime, timezone
+        timestamp = int(datetime.now(timezone.utc).timestamp() // (ttl_minutes * 60))
         message = f"{user_id}:{purpose}:{timestamp}".encode()
         token = hmac.new(self._master_key, message, hashlib.sha256).hexdigest()[:12]
         return token.upper()
@@ -177,8 +183,9 @@ class EncryptionModule:
                      token: str, ttl_minutes: int = 10) -> bool:
         """Verify an HMAC time-limited token (allows 1 window drift)."""
         for drift in [0, -1]:
-            from datetime import datetime
-            timestamp = int(datetime.utcnow().timestamp() // (ttl_minutes * 60)) + drift
+            # FIX: Replaced utcnow() with timezone-aware datetime
+            from datetime import datetime, timezone
+            timestamp = int(datetime.now(timezone.utc).timestamp() // (ttl_minutes * 60)) + drift
             message = f"{user_id}:{purpose}:{timestamp}".encode()
             expected = hmac.new(self._master_key, message, hashlib.sha256).hexdigest()[:12].upper()
             if hmac.compare_digest(token.upper(), expected):
