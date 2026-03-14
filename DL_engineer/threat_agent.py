@@ -91,10 +91,8 @@ class ThreatResponseAgent:
         self._frozen_accounts.add(user_id)
 
     def get_current_threat_score(self) -> int:
-        import random
-        drift = random.randint(-2, 3)
-        self._threat_score = max(10, min(98, self._threat_score + drift))
+        """Return the purely deterministic threat score based on actual events."""
+        # FIX: Removed random drift. Score is now solely driven by the evaluate() method.
         return self._threat_score
-
     def is_account_frozen(self, user_id: str) -> bool:
         return user_id in self._frozen_accounts

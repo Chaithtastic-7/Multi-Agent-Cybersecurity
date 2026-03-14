@@ -139,6 +139,7 @@ class AnomalyDetectionModule:
             score_components.append(40)
 
         # 6. Isolation Forest score (if available)
+        # 6. Isolation Forest score (if available)
         if self._sklearn_available:
             feature_vec = self._build_feature_vector(
                 auth_method, login_time, location, baseline
@@ -147,10 +148,17 @@ class AnomalyDetectionModule:
                 raw = self._iso_forest.score_samples(
                     self._scaler.transform([feature_vec])
                 )[0]
-                # Convert to 0-40 range (IF score is negative anomaly → positive risk)
-                if_risk = max(0, min(40, int((-raw) * 40)))
+                
+                # FIX: Use a sigmoid transformation to gracefully bound extreme outliers
+                # Raw IF scores are typically between -1.0 (anomaly) and 0.5 (normal)
+                # We invert it (-raw) so anomalies are positive, then apply a sigmoid curve
+                inverted_score = -raw 
+                sigmoid_val = 1 / (1 + np.exp(-(inverted_score - 0.2) * 5))
+                if_risk = int(sigmoid_val * 40)
+                
                 score_components.append(if_risk)
-            except Exception:
+            except Exception as e:
+                print(f"IF scoring error: {e}")
                 pass
 
         # Combine: weighted average, capped at 100
