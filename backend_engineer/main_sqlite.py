@@ -31,10 +31,12 @@ if not os.path.exists("nexus_soc.db"):
     sys.exit(1)
 
 # ── Imports ───────────────────────────────────────────────────
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException,Query
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio, logging
 from datetime import datetime, timezone
+from pydantic import BaseModel  
+from typing import List, Optional
 from typing import List
 import uvicorn
 
@@ -62,6 +64,11 @@ app = FastAPI(
     description="Multi-Agent Cybersecurity Defense System",
     version="4.2.1"
 )
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",        # For local frontend development
+    "http://localhost:8000",        # If frontend is served on the same port
+    "https://soc.nexusbank.in"      # Your production frontend domain
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows all origins
@@ -69,8 +76,6 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
     allow_headers=["*"],  # Allows all headers
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"],
-                   allow_methods=["*"], allow_headers=["*"])
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s")
@@ -95,7 +100,23 @@ net_agent    = NetworkMonitoringAgent(ip_blocker, event_logger)
 auth_agent   = AuthenticationAgent(auth_module, anomaly_module, event_logger)
 fraud_agent  = FraudDetectionAgent(fraud_module, event_logger)
 threat_agent = ThreatResponseAgent(ip_blocker, event_logger)
+# ── Pydantic Schemas ──────────────────────────────────────────
+class LoginRequest(BaseModel):
+    user_id: str
+    auth_method: str = "PASSWORD"
+    device_id: str
+    ip_address: str = "0.0.0.0"
+    mac_address: Optional[str] = None
+    location: str = "Unknown"
 
+class TransactionRequest(BaseModel):
+    user_id: str
+    amount: float            # Pydantic will auto-convert strings to floats, or reject if invalid
+    recipient: str
+    timestamp: Optional[str] = None
+    ip_address: str = "0.0.0.0"
+    location: str = "Unknown"
+    account_from: str = "OWN"
 # ── WebSocket manager ─────────────────────────────────────────
 class ConnectionManager:
     def __init__(self): self.active: List[WebSocket] = []
@@ -113,6 +134,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 def now(): return datetime.now(timezone.utc).isoformat()
+current_time = datetime.now(timezone.utc)
 
 # ── Routes ────────────────────────────────────────────────────
 
@@ -142,13 +164,14 @@ async def get_overview():
 
 # Login — anomaly detection + device tracking
 @app.post("/api/auth/login")
-async def process_login(data: dict):
-    user_id     = data.get("user_id", "")
-    auth_method = data.get("auth_method", "PASSWORD")
-    device_id   = data.get("device_id", "")
-    ip          = data.get("ip_address", "0.0.0.0")
-    mac         = data.get("mac_address")
-    location    = data.get("location", "Unknown")
+async def process_login(data: LoginRequest):
+    # Now we safely access attributes. FastAPI guarantees these exist and are the correct type!
+    user_id     = data.user_id
+    auth_method = data.auth_method
+    device_id   = data.device_id
+    ip          = data.ip_address
+    mac         = data.mac_address
+    location    = data.location
 
     if ip_blocker.is_blocked(ip, mac):
         raise HTTPException(status_code=403, detail="Access denied — IP/MAC blocked")
@@ -189,15 +212,16 @@ async def process_login(data: dict):
     }
 
 # Transaction fraud analysis
+# Transaction fraud analysis
 @app.post("/api/transaction/analyze")
-async def analyze_transaction(txn: dict):
+async def analyze_transaction(txn: TransactionRequest):
     result = fraud_module.analyze(
-        user_id=txn.get("user_id", ""),
-        amount=float(txn.get("amount", 0)),
-        recipient=txn.get("recipient", ""),
-        tx_time=txn.get("timestamp"),
-        ip=txn.get("ip_address", "0.0.0.0"),
-        location=txn.get("location", "Unknown")
+        user_id=txn.user_id,
+        amount=txn.amount,       # Safely guaranteed to be a float!
+        recipient=txn.recipient,
+        tx_time=txn.timestamp,
+        ip=txn.ip_address,
+        location=txn.location
     )
 
     # Save to SQLite
@@ -205,9 +229,9 @@ async def analyze_transaction(txn: dict):
     db = get_db()
     db.execute(
         "INSERT INTO transactions (tx_id,user_id,account_from,account_to,amount,ip_address,location,fraud_score,status) VALUES (?,?,?,?,?,?,?,?,?)",
-        (str(uuid.uuid4()), txn.get("user_id",""), txn.get("account_from","OWN"),
-         txn.get("recipient",""), float(txn.get("amount",0)),
-         txn.get("ip_address",""), txn.get("location",""),
+        (str(uuid.uuid4()), txn.user_id, txn.account_from,
+         txn.recipient, txn.amount,
+         txn.ip_address, txn.location,
          result["fraud_probability"],
          "BLOCKED" if result["fraud_probability"] > 0.8 else "APPROVED")
     )
@@ -302,12 +326,23 @@ async def get_ml_status():
 
 # ── WebSocket live feed ───────────────────────────────────────
 @app.websocket("/ws/live-feed")
-async def ws_live_feed(websocket: WebSocket):
+async def ws_live_feed(websocket: WebSocket, token: str = Query(None)):
+    # 1. Check if token is provided and valid BEFORE accepting the connection
+    # Note: Replace "super_secret_admin_token" with your actual JWT validation logic or environment variable
+    VALID_TOKEN = "super_secret_admin_token" 
+    
+    if token != VALID_TOKEN:
+        await websocket.close(code=1008) # 1008 is the standard code for Policy Violation / Unauthorized
+        return
+
+    # 2. If valid, accept the connection
     await manager.connect(websocket)
     try:
-        await websocket.send_json({"type": "CONNECTED",
-                                   "message": "NEXUS SOC Live Feed Connected",
-                                   "timestamp": now()})
+        await websocket.send_json({
+            "type": "CONNECTED",
+            "message": "NEXUS SOC Live Feed Connected",
+            "timestamp": now()
+        })
         while True:
             data = await websocket.receive_text()
             if data == "ping":

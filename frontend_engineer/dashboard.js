@@ -123,11 +123,47 @@ function updateClock() {
   if (el) el.innerText = new Date().toTimeString().slice(0, 8);
 }
 
+// ---------------- WEBSOCKET LIVE FEED ----------------
+let ws;
+
+function initWebSocket() {
+  // 1. Convert the HTTP backend URL to a WS URL and append the security token
+  // This must match the token we set in main_sqlite.py!
+  const wsUrl = BACKEND_URL.replace("http", "ws") + "/ws/live-feed?token=super_secret_admin_token";
+  
+  ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    console.log("✅ WebSocket Connected to NEXUS SOC Live Feed");
+  };
+
+  ws.onmessage = (event) => {
+    const alertData = JSON.parse(event.data);
+    console.log("🚨 Real-time Event Received:", alertData);
+    
+    // Future integration: You can use alertData to update your UI immediately 
+    // instead of waiting for the 3-second loadDashboard() polling cycle!
+  };
+
+  ws.onclose = (event) => {
+    console.warn(`⚠️ WebSocket Disconnected (Code: ${event.code}). Reconnecting in 5s...`);
+    // If the server goes down, automatically try to reconnect
+    setTimeout(initWebSocket, 5000);
+  };
+
+  ws.onerror = (err) => {
+    console.error("❌ WebSocket Error:", err);
+  };
+}
+
 // ---------------- INIT ----------------
 document.addEventListener("DOMContentLoaded", () => {
   initCharts();
   updateClock();
   loadDashboard();
+  
+  // Initialize the secure WebSocket connection
+  initWebSocket(); 
   
   // Set intervals
   setInterval(updateClock, 1000);
